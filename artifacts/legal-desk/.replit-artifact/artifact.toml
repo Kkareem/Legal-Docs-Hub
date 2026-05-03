@@ -1,0 +1,31 @@
+kind = "web"
+previewPath = "/"
+title = "LegalDesk — Legal Office Platform"
+version = "1.0.0"
+id = "artifacts/legal-desk"
+router = "path"
+
+[[integratedSkills]]
+name = "react-vite"
+version = "1.0.0"
+
+[[services]]
+name = "web"
+paths = [ "/" ]
+localPort = 18788
+
+[services.development]
+run = "pnpm --filter @workspace/legal-desk run dev"
+
+[services.production]
+build = [ "pnpm", "--filter", "@workspace/legal-desk", "run", "build" ]
+publicDir = "artifacts/legal-desk/dist/public"
+serve = "static"
+
+[[services.production.rewrites]]
+from = "/*"
+to = "/index.html"
+
+[services.env]
+PORT = "18788"
+BASE_PATH = "/"
