@@ -12,6 +12,7 @@ import paymentsRouter from "./payments";
 import powersOfAttorneyRouter from "./powers_of_attorney";
 import notificationsRouter from "./notifications";
 import dashboardRouter from "./dashboard";
+import searchRouter from "./search";
 
 const router: IRouter = Router();
 
@@ -28,5 +29,6 @@ router.use(paymentsRouter);
 router.use(powersOfAttorneyRouter);
 router.use(notificationsRouter);
 router.use(dashboardRouter);
+router.use(searchRouter);
 
 export default router;

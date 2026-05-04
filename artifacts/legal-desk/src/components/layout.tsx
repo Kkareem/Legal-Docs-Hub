@@ -18,6 +18,7 @@ import {
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import GlobalSearch from "@/components/global-search";
 
 const roleLabels: Record<string, string> = {
   owner: "مالك المكتب",
@@ -107,14 +108,15 @@ export default function Layout({ children }: { children: ReactNode }) {
 
       {/* Main Content */}
       <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
-        <header className="h-16 bg-white border-b border-slate-200 flex items-center justify-between px-8 shrink-0 z-10">
+        <header className="h-16 bg-white border-b border-slate-200 flex items-center justify-between px-6 shrink-0 z-10">
           <h1 className="text-xl font-semibold text-slate-800 font-serif">
             {navigation.find(n => location === n.href || (n.href !== "/" && location.startsWith(n.href)))?.name
               || (location === "/profile" ? "الملف الشخصي" : "لوحة التحكم")}
           </h1>
           <div className="flex items-center gap-3">
+            <GlobalSearch />
             <Link href="/notifications">
-              <Button variant="ghost" size="icon" className="text-slate-500 relative">
+              <Button variant="ghost" size="icon" className="text-slate-500">
                 <Bell className="w-5 h-5" />
               </Button>
             </Link>
