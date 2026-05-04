@@ -110,6 +110,22 @@ export default function Cases() {
   const activeCount = countActiveFilters(filters);
   const lawyerMap = useMemo(() => Object.fromEntries((users ?? []).map((u: any) => [String(u.id), u.name])), [users]);
 
+  const exportCSV = () => {
+    if (!filtered.length) return;
+    const cols = ["رقم القضية", "رقم المحكمة", "الموكل", "المحكمة", "النوع", "الحالة", "المحامي", "تاريخ التسجيل"];
+    const rows = filtered.map((c: any) => [
+      c.caseNumber ?? "", c.courtCaseNumber ?? "", c.clientName ?? "", c.court ?? "",
+      typeConfig[c.type] ?? c.type, statusConfig[c.status]?.label ?? c.status,
+      c.leadLawyerName ?? "", c.filingDate ?? "",
+    ]);
+    const csv = [cols, ...rows].map(r => r.map((v: string) => `"${String(v).replace(/"/g, '""')}"`).join(",")).join("\n");
+    const blob = new Blob(["\uFEFF" + csv], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url; a.download = `القضايا_${new Date().toISOString().slice(0, 10)}.csv`; a.click();
+    URL.revokeObjectURL(url);
+  };
+
   const handleCreate = async () => {
     if (!form.caseNumber.trim() || !form.clientId) { toast({ title: "رقم القضية والموكل مطلوبان", variant: "destructive" }); return; }
     await createMutation.mutateAsync({ data: { ...form, clientId: parseInt(form.clientId), leadLawyerId: form.leadLawyerId ? parseInt(form.leadLawyerId) : undefined } as any });
@@ -133,7 +149,12 @@ export default function Cases() {
           <h1 className="text-2xl font-bold text-navy">القضايا</h1>
           <p className="text-sm text-slate-500 mt-0.5">{isLoading ? "..." : `${filtered.length} قضية${activeCount ? ` (مفلترة من ${allCases?.length ?? 0})` : ""}`}</p>
         </div>
-        <Button onClick={() => setShowCreate(true)} className="gap-2"><Plus className="w-4 h-4" /> إضافة قضية</Button>
+        <div className="flex gap-2">
+          <Button variant="outline" onClick={exportCSV} disabled={!filtered.length} className="gap-2">
+            <Download className="w-4 h-4" /> تصدير CSV
+          </Button>
+          <Button onClick={() => setShowCreate(true)} className="gap-2"><Plus className="w-4 h-4" /> إضافة قضية</Button>
+        </div>
       </div>
 
       {/* Search + filter toggle bar */}
