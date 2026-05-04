@@ -42,7 +42,7 @@ users, clients, cases, documents, tasks, hearings, consultations, payments, powe
 
 ## Frontend Pages
 
-dashboard, clients, client-detail, cases, case-detail, tasks, hearings, consultations, payments, powers-of-attorney, users, notifications
+dashboard (with recharts BarChart + PieChart), clients, client-detail, cases, case-detail (status editing + inline document add), tasks (mark done), hearings, consultations, payments (mark paid), powers-of-attorney, users, notifications (mark read/all), documents, profile
 
 ## Important Notes
 

@@ -20,6 +20,8 @@ import Payments from "@/pages/payments";
 import PowersOfAttorney from "@/pages/powers-of-attorney";
 import Users from "@/pages/users";
 import Notifications from "@/pages/notifications";
+import Documents from "@/pages/documents";
+import Profile from "@/pages/profile";
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -92,6 +94,12 @@ function Router() {
       </Route>
       <Route path="/notifications">
         {() => <ProtectedRoute component={Notifications} />}
+      </Route>
+      <Route path="/documents">
+        {() => <ProtectedRoute component={Documents} />}
+      </Route>
+      <Route path="/profile">
+        {() => <ProtectedRoute component={Profile} />}
       </Route>
       <Route component={NotFound} />
     </Switch>
