@@ -7,7 +7,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Plus, Search, Eye, Trash2, SlidersHorizontal, X, ChevronDown, ChevronUp, ArrowUpDown } from "lucide-react";
+import { Plus, Search, Eye, Trash2, SlidersHorizontal, X, ChevronDown, ChevronUp, ArrowUpDown, Download } from "lucide-react";
 import { Link } from "wouter";
 import { useToast } from "@/hooks/use-toast";
 

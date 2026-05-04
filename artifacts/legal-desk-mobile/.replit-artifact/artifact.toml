@@ -1,0 +1,27 @@
+kind = "mobile"
+previewPath = "/mobile/"
+title = "LegalDesk Mobile"
+version = "1.0.0"
+id = "artifacts/legal-desk-mobile"
+router = "expo-domain"
+
+[[integratedSkills]]
+name = "expo"
+version = "1.0.0"
+
+[[services]]
+ensurePreviewReachable = "/status"
+name = "expo"
+paths = [ "/mobile/" ]
+localPort = 26000
+
+[services.development]
+run = "pnpm --filter @workspace/legal-desk-mobile run dev"
+
+[services.production]
+build = [ "pnpm", "--filter", "@workspace/legal-desk-mobile", "run", "build" ]
+run = [ "pnpm", "--filter", "@workspace/legal-desk-mobile", "run", "serve" ]
+
+[services.env]
+PORT = "26000"
+BASE_PATH = "/mobile/"
