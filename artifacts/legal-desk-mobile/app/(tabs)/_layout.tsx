@@ -1,6 +1,6 @@
+import { Feather } from "@expo/vector-icons";
 import { BlurView } from "expo-blur";
 import { Tabs } from "expo-router";
-import { Feather } from "@expo/vector-icons";
 import React from "react";
 import { Platform, StyleSheet, View, useColorScheme } from "react-native";
 import { useColors } from "@/hooks/useColors";
@@ -33,7 +33,7 @@ export default function TabLayout() {
           isIOS ? (
             <BlurView
               intensity={95}
-              tint="dark"
+              tint={isDark ? "dark" : "dark"}
               style={[StyleSheet.absoluteFill, { backgroundColor: "rgba(27,42,74,0.88)" }]}
             />
           ) : isWeb ? (
@@ -67,6 +67,13 @@ export default function TabLayout() {
         options={{
           title: "المهام",
           tabBarIcon: ({ color }) => <Feather name="check-square" size={22} color={color} />,
+        }}
+      />
+      <Tabs.Screen
+        name="more"
+        options={{
+          title: "المزيد",
+          tabBarIcon: ({ color }) => <Feather name="grid" size={22} color={color} />,
         }}
       />
     </Tabs>

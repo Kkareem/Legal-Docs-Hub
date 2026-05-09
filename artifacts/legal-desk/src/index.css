@@ -1,4 +1,7 @@
-@import "tailwindcss";
+@config "../tailwind.config.js";
+@import "tailwindcss" source(".");
+@import "./tailwind-safelist.css";
+@source "./";
 @import "tw-animate-css";
 @plugin "@tailwindcss/typography";
 

@@ -32,7 +32,7 @@ function AuthGate() {
     if (!user && inAuthGroup) {
       router.replace("/login");
     } else if (user && !inAuthGroup) {
-      router.replace("/(tabs)/");
+      router.replace("/(tabs)");
     }
   }, [user, loading, segments]);
 
