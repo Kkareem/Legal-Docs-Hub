@@ -1,0 +1,98 @@
+<section class="page-shell">
+  <h1 class="section-title">لوحة التحكم</h1>
+  <p class="section-subtitle">نسخة Angular أولية مرتبطة مباشرة بالـ backend الحالي.</p>
+
+  @if (loading()) {
+    <div class="stats-grid" style="margin-top: 24px;">
+      @for (item of [1,2,3,4,5,6]; track item) {
+        <div class="card stat-card"><div class="meta">جارٍ التحميل...</div><div class="stat-value">...</div></div>
+      }
+    </div>
+  } @else {
+    <div class="stats-grid" style="margin-top: 24px;">
+      <div class="card stat-card">
+        <div class="meta">القضايا النشطة</div>
+        <div class="stat-value">{{ summary()?.activeCases ?? 0 }}</div>
+      </div>
+      <div class="card stat-card">
+        <div class="meta">إجمالي الموكلين</div>
+        <div class="stat-value">{{ summary()?.totalClients ?? 0 }}</div>
+      </div>
+      <div class="card stat-card">
+        <div class="meta">المهام المعلقة</div>
+        <div class="stat-value">{{ summary()?.pendingTasks ?? 0 }}</div>
+      </div>
+      <div class="card stat-card">
+        <div class="meta">جلسات اليوم</div>
+        <div class="stat-value">{{ summary()?.todayHearings ?? 0 }}</div>
+      </div>
+      <div class="card stat-card">
+        <div class="meta">المحصّل</div>
+        <div class="stat-value">{{ formatCurrency(paymentSummary()?.totalCollected ?? 0) }}</div>
+      </div>
+      <div class="card stat-card">
+        <div class="meta">المعلّق</div>
+        <div class="stat-value">{{ formatCurrency(paymentSummary()?.totalPending ?? 0) }}</div>
+      </div>
+    </div>
+
+    <div class="grid grid-2" style="margin-top: 24px;">
+      <div class="card panel">
+        <h2 style="margin-top:0;">الجلسات القادمة</h2>
+        @if (!hearings().length) {
+          <div class="empty-state">لا توجد جلسات قادمة.</div>
+        } @else {
+          <div class="list">
+            @for (hearing of hearings(); track hearing.id) {
+              <div class="list-item">
+                <div>
+                  <strong>{{ hearing.court || 'محكمة غير محددة' }}</strong>
+                  <div class="meta">{{ hearing.caseNumber || ('#' + hearing.caseId) }}</div>
+                </div>
+                <div class="meta">{{ hearing.datetime | date:'medium':'':'ar-SA' }}</div>
+              </div>
+            }
+          </div>
+        }
+      </div>
+
+      <div class="card panel">
+        <h2 style="margin-top:0;">المهام المتأخرة</h2>
+        @if (!overdueTasks().length) {
+          <div class="empty-state">لا توجد مهام متأخرة.</div>
+        } @else {
+          <div class="list">
+            @for (task of overdueTasks(); track task.id) {
+              <div class="list-item">
+                <div>
+                  <strong>{{ task.title }}</strong>
+                  <div class="meta">{{ task.assigneeName || 'غير محدد' }}</div>
+                </div>
+                <div class="meta">{{ task.dueDate | date:'mediumDate':'':'ar-SA' }}</div>
+              </div>
+            }
+          </div>
+        }
+      </div>
+    </div>
+
+    <div class="card panel" style="margin-top: 24px;">
+      <h2 style="margin-top:0;">النشاط الأخير</h2>
+      @if (!recentActivity().length) {
+        <div class="empty-state">لا يوجد نشاط حديث.</div>
+      } @else {
+        <div class="list">
+          @for (activity of recentActivity(); track $index) {
+            <div class="list-item">
+              <div>
+                <strong>{{ activity.description || activity.action }}</strong>
+                <div class="meta">{{ activity.entityType || 'system' }}</div>
+              </div>
+              <div class="meta">{{ activity.createdAt | date:'short':'':'ar-SA' }}</div>
+            </div>
+          }
+        </div>
+      }
+    </div>
+  }
+</section>

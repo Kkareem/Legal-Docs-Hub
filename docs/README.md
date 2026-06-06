@@ -8,6 +8,10 @@
 
 - [Frontend / Backend Service Map](integration/frontend-backend-service-map.md)
 
+## Web
+
+- [Angular Migration Handoff](web/angular-migration-handoff.md)
+
 ## Mobile
 
 - [Mobile App to Java Backend Handoff](mobile/mobile-app-java-backend-handoff.md)

@@ -1,0 +1,105 @@
+<section class="page-shell">
+  <div class="toolbar" style="margin-bottom: 18px;">
+    <div class="toolbar-spacer">
+      <h1 class="section-title">الموكلون</h1>
+      <p class="section-subtitle">{{ clients().length }} موكل مسجل</p>
+    </div>
+    <button class="btn btn-primary" type="button" (click)="showCreate.set(!showCreate())">
+      {{ showCreate() ? 'إخفاء النموذج' : 'إضافة موكل' }}
+    </button>
+  </div>
+
+  @if (showCreate()) {
+    <div class="card form-card" style="margin-bottom: 18px;">
+      <div class="grid grid-3">
+        <div>
+          <label class="label">الاسم *</label>
+          <input class="input" [ngModel]="form().name" (ngModelChange)="updateForm('name', $event)" />
+        </div>
+        <div>
+          <label class="label">الهاتف</label>
+          <input class="input" [ngModel]="form().phone || ''" (ngModelChange)="updateForm('phone', $event)" />
+        </div>
+        <div>
+          <label class="label">البريد الإلكتروني</label>
+          <input class="input" [ngModel]="form().email || ''" (ngModelChange)="updateForm('email', $event)" />
+        </div>
+        <div>
+          <label class="label">رقم الهوية</label>
+          <input class="input" [ngModel]="form().nationalId || ''" (ngModelChange)="updateForm('nationalId', $event)" />
+        </div>
+        <div>
+          <label class="label">نوع الخدمة</label>
+          <input class="input" [ngModel]="form().serviceType || ''" (ngModelChange)="updateForm('serviceType', $event)" />
+        </div>
+        <div>
+          <label class="label">الحالة</label>
+          <select class="select" [ngModel]="form().status || 'new'" (ngModelChange)="updateForm('status', $event)">
+            <option value="new">جديد</option>
+            <option value="active">نشط</option>
+            <option value="pending">معلق</option>
+            <option value="completed">مكتمل</option>
+            <option value="closed">مغلق</option>
+          </select>
+        </div>
+      </div>
+      <div class="toolbar" style="margin-top: 16px;">
+        <button class="btn btn-secondary" type="button" (click)="showCreate.set(false)">إلغاء</button>
+        <button class="btn btn-primary" type="button" (click)="create()" [disabled]="saving()">
+          {{ saving() ? 'جارٍ الحفظ...' : 'حفظ' }}
+        </button>
+      </div>
+    </div>
+  }
+
+  <div class="toolbar" style="margin-bottom: 18px;">
+    <div class="toolbar-spacer">
+      <input class="input" placeholder="بحث بالاسم أو الهاتف..." [ngModel]="search()" (ngModelChange)="search.set($event)" />
+    </div>
+    <select class="select" style="max-width: 180px;" [ngModel]="statusFilter()" (ngModelChange)="statusFilter.set($event)">
+      <option value="all">جميع الحالات</option>
+      <option value="new">جديد</option>
+      <option value="active">نشط</option>
+      <option value="pending">معلق</option>
+      <option value="completed">مكتمل</option>
+      <option value="closed">مغلق</option>
+    </select>
+    <button class="btn btn-secondary" type="button" (click)="refresh()">تحديث</button>
+  </div>
+
+  <div class="card table-wrap">
+    @if (loading()) {
+      <div class="empty-state">جارٍ تحميل بيانات الموكلين...</div>
+    } @else if (!clients().length) {
+      <div class="empty-state">لا يوجد موكلون يطابقون الفلتر الحالي.</div>
+    } @else {
+      <table class="data-table">
+        <thead>
+          <tr>
+            <th>الاسم</th>
+            <th>الهاتف</th>
+            <th>البريد</th>
+            <th>نوع الخدمة</th>
+            <th>الحالة</th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (client of clients(); track client.id) {
+            <tr>
+              <td>
+                <strong>{{ client.name }}</strong>
+                <div class="meta">{{ client.nationalId || '—' }}</div>
+              </td>
+              <td>{{ client.phone || '—' }}</td>
+              <td>{{ client.email || '—' }}</td>
+              <td>{{ client.serviceType || '—' }}</td>
+              <td><span class="badge badge-soft">{{ statusLabels[client.status] || client.status }}</span></td>
+              <td><button class="btn btn-danger" type="button" (click)="remove(client)">حذف</button></td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    }
+  </div>
+</section>

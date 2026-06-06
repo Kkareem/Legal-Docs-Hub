@@ -1,0 +1,120 @@
+<section class="page-shell">
+  <div class="toolbar" style="margin-bottom: 18px;">
+    <div class="toolbar-spacer">
+      <h1 class="section-title">المهام</h1>
+      <p class="section-subtitle">{{ filteredTasks().length }} مهمة</p>
+    </div>
+    <button class="btn btn-primary" type="button" (click)="showCreate.set(!showCreate())">
+      {{ showCreate() ? 'إخفاء النموذج' : 'إضافة مهمة' }}
+    </button>
+  </div>
+
+  @if (showCreate()) {
+    <div class="card form-card" style="margin-bottom: 18px;">
+      <div class="grid grid-3">
+        <div>
+          <label class="label">العنوان *</label>
+          <input class="input" [ngModel]="form().title" (ngModelChange)="updateForm('title', $event)" />
+        </div>
+        <div>
+          <label class="label">الأولوية</label>
+          <select class="select" [ngModel]="form().priority || 'medium'" (ngModelChange)="updateForm('priority', $event)">
+            @for (entry of ['low','medium','high','urgent']; track entry) {
+              <option [value]="entry">{{ priorityLabels[entry] }}</option>
+            }
+          </select>
+        </div>
+        <div>
+          <label class="label">الحالة</label>
+          <select class="select" [ngModel]="form().status || 'new'" (ngModelChange)="updateForm('status', $event)">
+            @for (entry of ['new','in_progress','done','needs_review','overdue','cancelled']; track entry) {
+              <option [value]="entry">{{ statusLabels[entry] }}</option>
+            }
+          </select>
+        </div>
+        <div>
+          <label class="label">المسند إليه</label>
+          <select class="select" [ngModel]="form().assignedTo ?? ''" (ngModelChange)="updateForm('assignedTo', $event ? +$event : undefined)">
+            <option value="">اختر المحامي</option>
+            @for (user of users(); track user.id) {
+              <option [value]="user.id">{{ user.name }}</option>
+            }
+          </select>
+        </div>
+        <div>
+          <label class="label">القضية</label>
+          <select class="select" [ngModel]="form().caseId ?? ''" (ngModelChange)="updateForm('caseId', $event ? +$event : undefined)">
+            <option value="">اختر القضية</option>
+            @for (item of cases(); track item.id) {
+              <option [value]="item.id">{{ item.caseNumber }}</option>
+            }
+          </select>
+        </div>
+        <div>
+          <label class="label">تاريخ الاستحقاق</label>
+          <input class="input" type="date" [ngModel]="form().dueDate || ''" (ngModelChange)="updateForm('dueDate', $event)" />
+        </div>
+        <div style="grid-column: 1 / -1;">
+          <label class="label">الوصف</label>
+          <textarea class="textarea" [ngModel]="form().description || ''" (ngModelChange)="updateForm('description', $event)"></textarea>
+        </div>
+      </div>
+      <div class="toolbar" style="margin-top: 16px;">
+        <button class="btn btn-secondary" type="button" (click)="showCreate.set(false)">إلغاء</button>
+        <button class="btn btn-primary" type="button" (click)="create()" [disabled]="saving()">
+          {{ saving() ? 'جارٍ الحفظ...' : 'حفظ' }}
+        </button>
+      </div>
+    </div>
+  }
+
+  <div class="toolbar" style="margin-bottom: 18px;">
+    <div class="toolbar-spacer">
+      <input class="input" placeholder="بحث في المهام..." [ngModel]="search()" (ngModelChange)="search.set($event)" />
+    </div>
+    <select class="select" style="max-width: 180px;" [ngModel]="statusFilter()" (ngModelChange)="statusFilter.set($event)">
+      <option value="all">جميع الحالات</option>
+      @for (entry of ['new','in_progress','done','needs_review','overdue','cancelled']; track entry) {
+        <option [value]="entry">{{ statusLabels[entry] }}</option>
+      }
+    </select>
+    <select class="select" style="max-width: 180px;" [ngModel]="priorityFilter()" (ngModelChange)="priorityFilter.set($event)">
+      <option value="all">كل الأولويات</option>
+      @for (entry of ['low','medium','high','urgent']; track entry) {
+        <option [value]="entry">{{ priorityLabels[entry] }}</option>
+      }
+    </select>
+    <button class="btn btn-secondary" type="button" (click)="refresh()">تحديث</button>
+  </div>
+
+  <div class="card panel">
+    @if (loading()) {
+      <div class="empty-state">جارٍ تحميل المهام...</div>
+    } @else if (!filteredTasks().length) {
+      <div class="empty-state">لا توجد مهام مطابقة.</div>
+    } @else {
+      <div class="list">
+        @for (task of filteredTasks(); track task.id) {
+          <div class="list-item">
+            <div>
+              <strong>{{ task.title }}</strong>
+              <div class="meta">
+                {{ task.assigneeName || 'غير محدد' }}
+                @if (task.caseNumber) { • {{ task.caseNumber }} }
+                @if (task.dueDate) { • {{ task.dueDate | date:'mediumDate':'':'ar-SA' }} }
+              </div>
+            </div>
+            <div class="toolbar">
+              <span class="badge badge-soft">{{ priorityLabels[task.priority] || task.priority }}</span>
+              <span class="badge badge-neutral">{{ statusLabels[task.status] || task.status }}</span>
+              @if (task.status !== 'done') {
+                <button class="btn btn-secondary" type="button" (click)="markDone(task)">إكمال</button>
+              }
+              <button class="btn btn-danger" type="button" (click)="remove(task)">حذف</button>
+            </div>
+          </div>
+        }
+      </div>
+    }
+  </div>
+</section>

@@ -6,6 +6,7 @@ The GitHub-ready repository now keeps only the active codebase:
 
 - Java backend: Spring Boot modular monolith
 - Web app: React + TypeScript + Vite
+- Web migration app: Angular 21
 - Mobile app: React Native + TypeScript + Expo
 - Shared frontend/data libraries: API client, OpenAPI spec, Zod contracts, and DB schema packages
 
@@ -14,7 +15,8 @@ The GitHub-ready repository now keeps only the active codebase:
 ```text
 artifacts/
   api-server-java/       # Active Java backend
-  legal-desk/            # Active web app
+  legal-desk/            # Active React web app
+  legal-desk-angular/    # New Angular migration app
   legal-desk-mobile/     # Active mobile app
 docs/
   architecture/
@@ -23,6 +25,7 @@ docs/
   mobile/
   reference/
   release/
+  web/
 lib/
   api-client-react/
   api-spec/
@@ -35,7 +38,8 @@ pnpm-workspace.yaml
 ## Technology Stack
 
 - Backend: Java 21, Spring Boot 4, Spring Security, Spring Data JPA, Flyway
-- Web: React 19, TypeScript, Vite, Wouter, TanStack Query, Tailwind CSS
+- Web (current): React 19, TypeScript, Vite, Wouter, TanStack Query, Tailwind CSS
+- Web (migration): Angular 21, Router, HttpClient, standalone components
 - Mobile: Expo, React Native, TypeScript, Expo Router, TanStack Query
 - Shared packages: OpenAPI-driven API client generation, Zod schemas, DB schema package
 
@@ -65,6 +69,23 @@ BASE_PATH=/
 API_PROXY_TARGET=http://127.0.0.1:8015
 ```
 
+### Angular Web Migration
+
+From `artifacts/legal-desk-angular`:
+
+```bash
+npm install
+npm start
+```
+
+The Angular app runs on:
+
+```bash
+http://localhost:4020
+```
+
+It proxies `/api` requests to the Java backend on `8015`.
+
 ### Mobile
 
 From the repository root:
@@ -89,6 +110,7 @@ Start here:
 - [Release Readiness](docs/release/release-readiness.md)
 - [System Diagrams](docs/architecture/system-diagrams.md)
 - [Frontend / Backend Service Map](docs/integration/frontend-backend-service-map.md)
+- [Angular Migration Handoff](docs/web/angular-migration-handoff.md)
 - [Mobile App Handoff](docs/mobile/mobile-app-java-backend-handoff.md)
 
 ## Repository Cleanup Notes

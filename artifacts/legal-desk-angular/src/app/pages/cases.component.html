@@ -1,0 +1,123 @@
+<section class="page-shell">
+  <div class="toolbar" style="margin-bottom: 18px;">
+    <div class="toolbar-spacer">
+      <h1 class="section-title">القضايا</h1>
+      <p class="section-subtitle">{{ filteredCases().length }} قضية</p>
+    </div>
+    <button class="btn btn-primary" type="button" (click)="showCreate.set(!showCreate())">
+      {{ showCreate() ? 'إخفاء النموذج' : 'إضافة قضية' }}
+    </button>
+  </div>
+
+  @if (showCreate()) {
+    <div class="card form-card" style="margin-bottom: 18px;">
+      <div class="grid grid-3">
+        <div>
+          <label class="label">رقم القضية *</label>
+          <input class="input" [ngModel]="form().caseNumber" (ngModelChange)="updateForm('caseNumber', $event)" />
+        </div>
+        <div>
+          <label class="label">رقم المحكمة</label>
+          <input class="input" [ngModel]="form().courtCaseNumber || ''" (ngModelChange)="updateForm('courtCaseNumber', $event)" />
+        </div>
+        <div>
+          <label class="label">نوع القضية</label>
+          <select class="select" [ngModel]="form().type" (ngModelChange)="updateForm('type', $event)">
+            @for (entry of ['civil','criminal','commercial','family','labor','administrative','other']; track entry) {
+              <option [value]="entry">{{ typeLabels[entry] }}</option>
+            }
+          </select>
+        </div>
+        <div>
+          <label class="label">الموكل *</label>
+          <select class="select" [ngModel]="form().clientId" (ngModelChange)="updateForm('clientId', +$event)">
+            <option [ngValue]="0">اختر الموكل</option>
+            @for (client of clients(); track client.id) {
+              <option [ngValue]="client.id">{{ client.name }}</option>
+            }
+          </select>
+        </div>
+        <div>
+          <label class="label">المحامي المسؤول</label>
+          <select class="select" [ngModel]="form().leadLawyerId ?? ''" (ngModelChange)="updateForm('leadLawyerId', $event ? +$event : undefined)">
+            <option value="">اختر المحامي</option>
+            @for (user of users(); track user.id) {
+              <option [value]="user.id">{{ user.name }}</option>
+            }
+          </select>
+        </div>
+        <div>
+          <label class="label">الحالة</label>
+          <select class="select" [ngModel]="form().status || 'new'" (ngModelChange)="updateForm('status', $event)">
+            @for (entry of ['new','active','upcoming_hearing','verdict','adjourned','closed']; track entry) {
+              <option [value]="entry">{{ statusLabels[entry] }}</option>
+            }
+          </select>
+        </div>
+        <div>
+          <label class="label">المحكمة</label>
+          <input class="input" [ngModel]="form().court || ''" (ngModelChange)="updateForm('court', $event)" />
+        </div>
+        <div>
+          <label class="label">الدائرة</label>
+          <input class="input" [ngModel]="form().division || ''" (ngModelChange)="updateForm('division', $event)" />
+        </div>
+        <div>
+          <label class="label">الخصم</label>
+          <input class="input" [ngModel]="form().opposingParty || ''" (ngModelChange)="updateForm('opposingParty', $event)" />
+        </div>
+      </div>
+      <div class="toolbar" style="margin-top: 16px;">
+        <button class="btn btn-secondary" type="button" (click)="showCreate.set(false)">إلغاء</button>
+        <button class="btn btn-primary" type="button" (click)="create()" [disabled]="saving()">
+          {{ saving() ? 'جارٍ الحفظ...' : 'حفظ' }}
+        </button>
+      </div>
+    </div>
+  }
+
+  <div class="toolbar" style="margin-bottom: 18px;">
+    <div class="toolbar-spacer">
+      <input class="input" placeholder="بحث برقم القضية أو الموكل..." [ngModel]="search()" (ngModelChange)="search.set($event)" />
+    </div>
+    <button class="btn btn-secondary" type="button" (click)="refresh()">تحديث</button>
+  </div>
+
+  <div class="card table-wrap">
+    @if (loading()) {
+      <div class="empty-state">جارٍ تحميل بيانات القضايا...</div>
+    } @else if (!filteredCases().length) {
+      <div class="empty-state">لا توجد قضايا مطابقة.</div>
+    } @else {
+      <table class="data-table">
+        <thead>
+          <tr>
+            <th>رقم القضية</th>
+            <th>الموكل</th>
+            <th>المحكمة</th>
+            <th>النوع</th>
+            <th>الحالة</th>
+            <th>المحامي</th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (item of filteredCases(); track item.id) {
+            <tr>
+              <td>
+                <strong>{{ item.caseNumber }}</strong>
+                <div class="meta">{{ item.courtCaseNumber || '—' }}</div>
+              </td>
+              <td>{{ item.clientName || ('#' + item.clientId) }}</td>
+              <td>{{ item.court || '—' }}</td>
+              <td><span class="badge badge-soft">{{ typeLabels[item.type] || item.type }}</span></td>
+              <td><span class="badge badge-neutral">{{ statusLabels[item.status] || item.status }}</span></td>
+              <td>{{ item.leadLawyerName || '—' }}</td>
+              <td><button class="btn btn-danger" type="button" (click)="remove(item)">حذف</button></td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    }
+  </div>
+</section>
