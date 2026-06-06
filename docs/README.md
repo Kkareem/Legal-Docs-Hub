@@ -15,6 +15,7 @@
 ## Mobile
 
 - [Mobile App to Java Backend Handoff](mobile/mobile-app-java-backend-handoff.md)
+- [Flutter Mobile Migration Handoff](mobile/flutter-mobile-migration-handoff.md)
 
 ## History
 

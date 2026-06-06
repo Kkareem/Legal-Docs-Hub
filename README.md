@@ -8,6 +8,7 @@ The GitHub-ready repository now keeps only the active codebase:
 - Web app: React + TypeScript + Vite
 - Web migration app: Angular 21
 - Mobile app: React Native + TypeScript + Expo
+- Mobile migration app: Flutter
 - Shared frontend/data libraries: API client, OpenAPI spec, Zod contracts, and DB schema packages
 
 ## Active Repository Structure
@@ -18,6 +19,7 @@ artifacts/
   legal-desk/            # Active React web app
   legal-desk-angular/    # New Angular migration app
   legal-desk-mobile/     # Active mobile app
+  legal-desk-flutter/    # New Flutter mobile migration app
 docs/
   architecture/
   history/
@@ -41,6 +43,7 @@ pnpm-workspace.yaml
 - Web (current): React 19, TypeScript, Vite, Wouter, TanStack Query, Tailwind CSS
 - Web (migration): Angular 21, Router, HttpClient, standalone components
 - Mobile: Expo, React Native, TypeScript, Expo Router, TanStack Query
+- Mobile migration: Flutter, Provider, GoRouter, Dio
 - Shared packages: OpenAPI-driven API client generation, Zod schemas, DB schema package
 
 ## Quick Start
@@ -102,6 +105,35 @@ EXPO_PUBLIC_API_BASE_URL=http://127.0.0.1:8015/api
 
 For a real device, replace `127.0.0.1` with the machine LAN IP.
 
+### Flutter Mobile Migration
+
+From `artifacts/legal-desk-flutter`:
+
+```bash
+flutter pub get
+flutter run -d web-server --web-port 4030 --dart-define=API_BASE_URL=http://127.0.0.1:8015/api
+```
+
+Current validated slice:
+
+- login
+- dashboard
+- clients
+- client detail
+- cases
+- case detail
+- tasks
+- hearings
+- consultations
+- payments
+- documents
+- powers of attorney
+- search
+- notifications
+- profile
+- users
+- more hub
+
 ## Documentation
 
 Start here:
@@ -112,6 +144,7 @@ Start here:
 - [Frontend / Backend Service Map](docs/integration/frontend-backend-service-map.md)
 - [Angular Migration Handoff](docs/web/angular-migration-handoff.md)
 - [Mobile App Handoff](docs/mobile/mobile-app-java-backend-handoff.md)
+- [Flutter Mobile Migration Handoff](docs/mobile/flutter-mobile-migration-handoff.md)
 
 ## Repository Cleanup Notes
 

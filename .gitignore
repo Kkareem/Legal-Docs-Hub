@@ -21,6 +21,17 @@ out-tsc/
 android/
 ios/
 
+# Flutter
+.dart_tool/
+.flutter-plugins
+.flutter-plugins-dependencies
+.packages
+.pub/
+pubspec_overrides.yaml
+artifacts/api-server-java/legaldesk-app/.data/
+*.mv.db
+*.lock.db
+
 # Environment and secrets
 .env
 .env.*
