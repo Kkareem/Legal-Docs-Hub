@@ -15,17 +15,19 @@ import org.springframework.transaction.annotation.Transactional;
 @Service
 @Transactional
 public class TaskApplicationService {
+    private final com.legaldesk.modules.cases.application.CaseAccessService caseAccess;
     private final TaskEntityRepository repository;
     private final ReferenceLookupService referenceLookupService;
 
-    public TaskApplicationService(TaskEntityRepository repository, ReferenceLookupService referenceLookupService) {
+    public TaskApplicationService(TaskEntityRepository repository, ReferenceLookupService referenceLookupService, com.legaldesk.modules.cases.application.CaseAccessService caseAccess) {
         this.repository = repository;
+        this.caseAccess = caseAccess;
         this.referenceLookupService = referenceLookupService;
     }
 
     @Transactional(readOnly = true)
     public List<TaskResponse> list(String status, Long assignedTo, Long caseId, String priority) {
-        return enrich(repository.findAllByOrderByCreatedAtAsc()).stream()
+        return enrich(repository.findAllByOrderByCreatedAtAsc()).stream().filter(x -> x.caseId()==null || caseAccess.allowed(x.caseId()))
                 .filter(t -> status == null || status.equals(t.status()))
                 .filter(t -> assignedTo == null || assignedTo.equals(t.assignedTo()))
                 .filter(t -> caseId == null || caseId.equals(t.caseId()))
@@ -51,12 +53,14 @@ public class TaskApplicationService {
     public void delete(Long id) { repository.delete(findEntity(id)); }
 
     private TaskEntity findEntity(Long id) {
-        return repository.findById(id).orElseThrow(() -> new NotFoundException("Task not found"));
+        TaskEntity entity=repository.findById(id).orElseThrow(() -> new NotFoundException("Task not found")); if(entity.getCaseId()!=null)caseAccess.require(entity.getCaseId()); return entity;
     }
 
     private void apply(TaskEntity entity, TaskUpsertRequest request, boolean creating) {
         if (creating || request.title() != null) entity.setTitle(request.title());
         if (creating || request.description() != null) entity.setDescription(request.description());
+        if(request.caseId()!=null)caseAccess.require(request.caseId());
+        if(entity.getCaseId()!=null)caseAccess.require(entity.getCaseId());
         if (creating || request.caseId() != null) entity.setCaseId(request.caseId());
         if (creating || request.assignedTo() != null) entity.setAssignedTo(request.assignedTo());
         if (creating || request.dueDate() != null) entity.setDueDate(request.dueDate());

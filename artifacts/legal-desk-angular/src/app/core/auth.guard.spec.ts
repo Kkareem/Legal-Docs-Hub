@@ -1,7 +1,7 @@
 import { TestBed } from '@angular/core/testing';
 import { ActivatedRouteSnapshot, CanActivateFn, provideRouter, Router, RouterStateSnapshot, UrlTree } from '@angular/router';
 import { firstValueFrom, Observable, of } from 'rxjs';
-import { adminGuard, authGuard, passwordGuard, staffGuard } from './auth.guard';
+import { adminGuard, authGuard, passwordGuard, staffGuard, clientGuard } from './auth.guard';
 import { AuthService } from './auth.service';
 import { User } from './models';
 
@@ -43,6 +43,16 @@ describe('Onboarding and staff route guards', () => {
   });
   it('denies clients access to staff consultation requests', async () => {
     user!.role = 'client';
-    expect(await run(staffGuard)).toBe('/dashboard');
+    expect(await run(staffGuard)).toBe('/my-account');
+    expect(await run(clientGuard)).toBe(true);
+    expect(await run(adminGuard)).toBe('/my-account');
+  });
+  it('keeps staff out of the client portal', async () => {
+    expect(await run(clientGuard)).toBe('/dashboard');
+  });
+  it('requires client password changes before entering their portal', async () => {
+    user!.role='client';
+    user!.mustChangePassword=true;
+    expect(await run(authGuard)).toBe('/change-password');
   });
 });

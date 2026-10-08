@@ -4,14 +4,15 @@
       <div class="brand-mark">LD</div>
       <div>
         <h1>LegalDesk</h1>
-        <p>Angular Migration</p>
+        <p>إدارة المكتب القانوني</p>
       </div>
     </div>
 
-    <nav class="nav">
+    <button type="button" class="btn btn-secondary mobile-menu" [attr.aria-expanded]="menuOpen()" aria-controls="office-navigation" (click)="menuOpen.set(!menuOpen())">{{menuOpen()?'إغلاق القائمة':'قائمة المكتب'}}</button>
+    <nav id="office-navigation" class="nav" [class.mobile-open]="menuOpen()">
       @for (item of navigation(); track item.path) {
         <a
-          class="nav-link"
+          class="nav-link" (click)="menuOpen.set(false)"
           [routerLink]="item.path"
           routerLinkActive="active"
           [routerLinkActiveOptions]="{ exact: item.path === '/dashboard' }"
@@ -21,7 +22,7 @@
       }
     </nav>
 
-    <div class="sidebar-footer">
+    <div class="sidebar-footer" [class.mobile-open]="menuOpen()">
       <div class="user-block">
         <strong>{{ user()?.name }}</strong>
         <span>{{ user()?.email }}</span>

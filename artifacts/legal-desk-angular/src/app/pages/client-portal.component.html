@@ -1,0 +1,58 @@
+<main class="page-shell" dir="rtl">
+<header class="toolbar"><div class="toolbar-spacer"><h1 class="section-title">بوابة الموكل</h1><p class="section-subtitle">أهلًا {{overview()?.client?.name || auth.user()?.name}} — متابعة قضاياك واستشاراتك ومدفوعاتك</p></div><button class="btn btn-secondary" (click)="load()">تحديث</button><button class="btn btn-secondary" (click)="logout()">تسجيل الخروج</button></header>
+<nav class="toolbar" style="margin:24px 0" aria-label="أقسام بوابة الموكل">
+@for(item of [{id:'cases',label:'قضاياي'},{id:'hearings',label:'جلساتي'},{id:'consultations',label:'استشاراتي'},{id:'payments',label:'المدفوعات'}];track item.id){
+<button class="btn" [class.btn-primary]="tab()===item.id" [class.btn-secondary]="tab()!==item.id" (click)="tab.set(item.id)">{{item.label}}</button>}
+</nav>
+@if(message()){<p class="card panel" role="status">{{message()}}</p>}
+@if(loading()){<p>جارٍ تحميل بياناتك...</p>}
+@if(overview();as data){
+@if(tab()==='cases'){
+<div class="grid grid-2">@for(c of data.cases;track c.id){<article class="card panel"><h2>{{c.case_number}}</h2><p>{{caseStatuses[c.status] || c.status}}</p><p>المحامون: @for(l of c.lawyers;track l.id){<span>{{l.name}} </span>}@empty{ {{c.lawyer_name || 'لم يحدد بعد'}} }</p><p>{{c.court || 'المحكمة لم تحدد'}}</p><button class="btn btn-primary" (click)="selectCase(c.id)">تفاصيل القضية وتقدمها</button></article>}@empty{<div class="card empty-state">لا توجد قضايا مرتبطة بحسابك.</div>}</div>
+@if(details();as detail){
+<section class="card panel grid" style="margin-top:24px">
+<h2>القضية {{detail.case.case_number}}</h2><p>المرحلة الحالية: <strong>{{caseStatuses[detail.case.status] || detail.case.status}}</strong></p><p>{{detail.case.description}}</p>
+<h3>سجل تقدم القضية</h3>
+<ol class="list"><li class="card panel">فتح القضية — {{detail.case.created_at | date:'mediumDate'}}</li>
+@for(update of detail.updates;track update.id){<li class="card panel"><strong>{{update.title}}</strong><p style="white-space:pre-wrap">{{update.body}}</p><p class="meta">{{caseStatuses[update.status] || update.status}} · {{update.created_at | date:'medium'}} · {{update.author_name}}</p></li>}
+</ol>
+<h3>جلسات القضية</h3>
+@for(h of detail.hearings;track h.id){<div class="list-item"><strong>{{h.court}}</strong><span>{{h.datetime | date:'medium'}} · {{hearingStatuses[h.status] || h.status}}</span></div>}@empty{<p class="meta">لا توجد جلسات مسجلة.</p>}
+<h3>المرفقات المشتركة مع المكتب</h3>
+@for(file of detail.files;track file.id){<a class="btn btn-secondary" [href]="api.fileUrl(file.id)" download>{{file.file_name}} — تنزيل</a>}@empty{<p class="meta">لا توجد مرفقات مرفوعة.</p>}
+@for(doc of detail.documents;track doc.id){<p class="meta">مستند مسجل بالمكتب: {{doc.file_name}}</p>}
+<label>إرفاق ملفات للقضية<input class="input" #caseFiles type="file" multiple></label><p class="meta">كل أنواع الملفات مدعومة. حتى 10 ملفات في المرة، 20 ميجابايت للملف و50 ميجابايت للمجموعة.</p>
+<button class="btn btn-primary" [disabled]="busy()" (click)="upload(caseFiles)">رفع المرفقات المحددة</button>
+@if(detail.reviews.length){@for(r of detail.reviews;track $index){<div class="card panel"><h3>تقييمك للمحامي {{r.lawyer_name}}: {{r.stars}} / 5</h3><p>{{r.comment}}</p></div>}}
+@if(detail.case.status==='closed' && unreviewedLawyers().length){
+<form class="grid" #rating="ngForm" (ngSubmit)="review()"><h3>تقييم المحامي</h3><label>المحامي<select class="select" name="reviewLawyer" [(ngModel)]="reviewLawyerId" required>@for(l of unreviewedLawyers();track l.id){<option [ngValue]="l.id">{{l.name}}</option>}</select></label><label>التقييم<select class="select" name="stars" [(ngModel)]="stars">@for(n of [5,4,3,2,1];track n){<option [ngValue]="n">{{n}} / 5</option>}</select></label><label>تعليقك<textarea class="textarea" name="comment" [(ngModel)]="comment" maxlength="2000"></textarea></label><button class="btn btn-primary" [disabled]="busy()">إرسال التقييم</button></form>
+}
+</section>}
+}
+@if(tab()==='hearings'){
+<section class="card panel"><h2>جدول جلساتي</h2>@for(h of data.hearings;track h.id){<div class="list-item"><div><strong>{{h.case_number}}</strong><p>{{h.court}}</p></div><div>{{h.datetime | date:'medium'}}<p>{{hearingStatuses[h.status] || h.status}}</p></div></div>}@empty{<p class="empty-state">لا توجد جلسات مسجلة.</p>}</section>
+}
+@if(tab()==='payments'){
+<section class="card panel" style="margin-bottom:20px"><h2>بيانات التحويل البنكي للمكتب</h2>
+@if(data.bank.iban){<p>البنك: {{data.bank.bank_name}}</p><p>اسم المستفيد: {{data.bank.beneficiary}}</p><p>IBAN: <strong dir="ltr">{{data.bank.iban}}</strong></p><p>{{data.bank.instructions}}</p>}
+@else{<p>تواصل مع المكتب للحصول على بيانات التحويل البنكي.</p>}
+<p class="meta">حوّل المبلغ المطلوب ثم ارفع الإيصال ورقم مرجع التحويل. تأكيد السداد يتم بعد مراجعة الأدمن.</p></section>
+@for(p of data.payments;track p.id){
+<article class="card panel grid" style="margin-bottom:20px"><h2>طلب دفع #{{p.id}} — {{currency.format(p.amount)}}</h2><p>{{p.case_number}} · {{p.notes}}</p><strong>{{paymentStatuses[p.status] || p.status}}</strong>
+@for(r of p.receipts;track r.id){<div class="card panel"><p>مرجع التحويل: {{r.reference}} · {{r.status==='approved'?'مقبول':r.status==='rejected'?'مرفوض':'قيد المراجعة'}}</p><p>{{r.review_notes}}</p><a [href]="api.fileUrl(r.file_id)" class="btn btn-secondary" download>تنزيل الإيصال</a></div>}
+@if(p.status==='pending'||p.status==='overdue'){
+<label>مرجع التحويل<input class="input" [(ngModel)]="references[p.id]" maxlength="200"></label><label>إيصال التحويل<input class="input" #receiptFile type="file"></label>
+<button class="btn btn-primary" [disabled]="busy() || !references[p.id]?.trim()" (click)="sendReceipt(p.id,receiptFile)">إرسال الإيصال للمراجعة</button>}
+</article>}@empty{<div class="card empty-state">لا توجد طلبات دفع.</div>}
+}
+@if(tab()==='consultations'){
+<form class="card panel grid" #consult="ngForm" (ngSubmit)="newConsultation()"><h2>استشارة جديدة للمكتب</h2><label>القضية (اختياري)<select class="select" name="caseId" [(ngModel)]="consultCaseId"><option [ngValue]="null">استشارة عامة</option>@for(c of data.cases;track c.id){<option [ngValue]="c.id">{{c.case_number}}</option>}</select></label><label>تفاصيل الاستشارة<textarea class="textarea" name="summary" [(ngModel)]="summary" required minlength="10" maxlength="10000"></textarea></label><button class="btn btn-primary" [disabled]="consult.invalid || busy()">إرسال الاستشارة</button></form>
+<form class="card panel grid" style="margin-top:20px" #linkForm="ngForm" (ngSubmit)="link()"><h3>ربط استشارة سابقة أرسلتها كزائر</h3><label>رقم الطلب<input class="input" type="number" name="linkId" [(ngModel)]="linkId" required min="1"></label><label>الرمز السري<input class="input" name="linkToken" [(ngModel)]="linkToken" required></label><button class="btn btn-secondary" [disabled]="linkForm.invalid || busy()">ربط الاستشارة بحسابي</button></form>
+@for(q of data.requests;track q.id){<article class="card panel grid" style="margin-top:20px"><h3>استشارة #{{q.id}}</h3><p style="white-space:pre-wrap">{{q.summary}}</p>@for(m of q.messages;track m.id){<div class="card panel"><strong>{{m.sender_type==='staff'?(m.sender_name || 'المكتب'):'أنت'}}</strong><p style="white-space:pre-wrap">{{m.body}}</p></div>}
+@if(q.canReply){<label>ردك<textarea class="textarea" [(ngModel)]="replies[q.id]" maxlength="20000"></textarea></label><button class="btn btn-primary" [disabled]="busy()||!replies[q.id]?.trim()" (click)="reply(q.id)">إرسال الرد</button>}@else{<p class="meta">بانتظار رد المكتب</p>}
+</article>}
+@for(q of data.consultations;track q.id){<article class="card panel" style="margin-top:20px"><h3>استشارة مسجلة بالمكتب #{{q.id}}</h3><p>{{q.summary}}</p><p>{{q.response || 'بانتظار الرد'}}</p></article>}
+}
+}
+</main>
+

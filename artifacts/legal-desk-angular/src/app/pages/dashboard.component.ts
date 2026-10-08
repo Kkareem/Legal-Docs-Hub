@@ -1,3 +1,4 @@
+import {CurrencyService} from '../core/currency.service';
 import { CommonModule } from '@angular/common';
 import { Component, inject, signal } from '@angular/core';
 import { forkJoin } from 'rxjs';
@@ -11,6 +12,7 @@ import { ActivityItem, DashboardSummary, Hearing, PaymentSummary, TaskItem } fro
   templateUrl: './dashboard.component.html',
 })
 export class DashboardComponent {
+ readonly currency=inject(CurrencyService);
   private readonly api = inject(ApiService);
 
   readonly loading = signal(true);
@@ -41,10 +43,6 @@ export class DashboardComponent {
   }
 
   formatCurrency(value: number) {
-    return new Intl.NumberFormat('ar-SA', {
-      style: 'currency',
-      currency: 'SAR',
-      maximumFractionDigits: 0,
-    }).format(value ?? 0);
+    return this.currency.format(value);
   }
 }

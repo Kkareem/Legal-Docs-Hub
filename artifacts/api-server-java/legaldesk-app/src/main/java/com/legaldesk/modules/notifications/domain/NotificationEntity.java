@@ -11,6 +11,9 @@ public class NotificationEntity extends CreatedEntity {
 
     @Column(name = "user_id", nullable = false)
     private Long userId;
+    @Column(name="site_visible",nullable=false)
+    private boolean siteVisible=true;
+    public boolean isSiteVisible(){return siteVisible;}
     @Column(nullable = false)
     private String type = "general";
     @Column(nullable = false)

@@ -17,6 +17,14 @@ import org.springframework.web.bind.annotation.RestControllerAdvice;
 
 @RestControllerAdvice
 public class ApiExceptionHandler {
+    @ExceptionHandler({org.springframework.web.multipart.support.MissingServletRequestPartException.class, org.springframework.web.bind.MissingServletRequestParameterException.class})
+    public ResponseEntity<ApiErrorResponse> handleMissingUpload(Exception exception, HttpServletRequest request) {
+        return build(HttpStatus.BAD_REQUEST, "Required upload file or field is missing", request, List.of());
+    }
+    @ExceptionHandler(org.springframework.web.multipart.MaxUploadSizeExceededException.class)
+    public ResponseEntity<ApiErrorResponse> handleUploadSize(Exception exception, HttpServletRequest request) {
+        return build(HttpStatus.PAYLOAD_TOO_LARGE, "Upload exceeds the allowed file size", request, List.of());
+    }
     @ExceptionHandler(org.springframework.security.access.AccessDeniedException.class)
     public ResponseEntity<ApiErrorResponse> handleDenied(Exception exception, HttpServletRequest request) {
         return build(HttpStatus.FORBIDDEN, "Access denied", request, List.of());

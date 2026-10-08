@@ -115,7 +115,6 @@ public class DevDataSeeder implements CommandLineRunner {
         clientOne.setStatus("active");
         clientOne.setServiceType("Commercial Litigation");
         clientOne.setNotes("VIP client");
-        clientOne.setUserId(owner.getId());
         stamp(clientOne, now.minusDays(8));
         clientOne = clientRepository.save(clientOne);
 
@@ -128,7 +127,6 @@ public class DevDataSeeder implements CommandLineRunner {
         clientTwo.setOfficeId(1L);
         clientTwo.setStatus("new");
         clientTwo.setServiceType("Family Case");
-        clientTwo.setUserId(lawyer.getId());
         stamp(clientTwo, now.minusDays(7));
         clientTwo = clientRepository.save(clientTwo);
 

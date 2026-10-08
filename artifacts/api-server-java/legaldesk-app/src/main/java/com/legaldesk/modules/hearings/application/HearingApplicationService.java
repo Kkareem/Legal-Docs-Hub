@@ -15,16 +15,18 @@ import org.springframework.transaction.annotation.Transactional;
 @Service
 @Transactional
 public class HearingApplicationService {
+    private final com.legaldesk.modules.cases.application.CaseAccessService caseAccess;
     private final HearingEntityRepository repository;
     private final ReferenceLookupService referenceLookupService;
-    public HearingApplicationService(HearingEntityRepository repository, ReferenceLookupService referenceLookupService) {
+    public HearingApplicationService(HearingEntityRepository repository, ReferenceLookupService referenceLookupService, com.legaldesk.modules.cases.application.CaseAccessService caseAccess) {
         this.repository = repository;
+        this.caseAccess = caseAccess;
         this.referenceLookupService = referenceLookupService;
     }
     @Transactional(readOnly = true)
     public List<HearingResponse> list(Long caseId, Long assignedLawyer, String status, Boolean upcoming) {
         OffsetDateTime now = OffsetDateTime.now();
-        return enrich(repository.findAllByOrderByDatetimeAsc()).stream()
+        return enrich(repository.findAllByOrderByDatetimeAsc()).stream().filter(x -> x.caseId()==null || caseAccess.allowed(x.caseId()))
                 .filter(h -> caseId == null || caseId.equals(h.caseId()))
                 .filter(h -> assignedLawyer == null || assignedLawyer.equals(h.assignedLawyer()))
                 .filter(h -> status == null || status.equals(h.status()))
@@ -44,8 +46,10 @@ public class HearingApplicationService {
         return enrichOne(repository.save(entity));
     }
     public void delete(Long id) { repository.delete(findEntity(id)); }
-    private HearingEntity findEntity(Long id) { return repository.findById(id).orElseThrow(() -> new NotFoundException("Hearing not found")); }
+    private HearingEntity findEntity(Long id) { HearingEntity entity=repository.findById(id).orElseThrow(() -> new NotFoundException("Hearing not found")); if(entity.getCaseId()!=null)caseAccess.require(entity.getCaseId()); return entity; }
     private void apply(HearingEntity entity, HearingUpsertRequest request, boolean creating) {
+        if(request.caseId()!=null)caseAccess.require(request.caseId());
+        if(entity.getCaseId()!=null)caseAccess.require(entity.getCaseId());
         if (creating || request.caseId() != null) entity.setCaseId(request.caseId());
         if (creating || request.datetime() != null) entity.setDatetime(request.datetime());
         if (creating || request.court() != null) entity.setCourt(request.court());

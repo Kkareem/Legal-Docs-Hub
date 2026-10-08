@@ -1,13 +1,14 @@
 import { CommonModule } from '@angular/common';
 import { Component, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
+import {RouterLink} from '@angular/router';
 import { ApiService } from '../core/api.service';
 import { CaseItem, Client, CreateCaseBody, User } from '../core/models';
 
 @Component({
   selector: 'app-cases',
   standalone: true,
-  imports: [CommonModule, FormsModule],
+  imports: [CommonModule, FormsModule, RouterLink],
   templateUrl: './cases.component.html',
 })
 export class CasesComponent {
@@ -44,7 +45,7 @@ export class CasesComponent {
     type: 'civil',
     court: '',
     division: '',
-    clientId: 0,
+    clientIds: [], lawyerIds: [], clientId: 0,
     leadLawyerId: undefined,
     status: 'new',
     opposingParty: '',
@@ -74,7 +75,7 @@ export class CasesComponent {
     if (!q) return this.cases();
     return this.cases().filter((item) =>
       item.caseNumber.toLowerCase().includes(q) ||
-      (item.clientName || '').toLowerCase().includes(q) ||
+      this.names(item.clients, item.clientName).toLowerCase().includes(q) || this.names(item.lawyers, item.leadLawyerName).toLowerCase().includes(q) ||
       (item.court || '').toLowerCase().includes(q) ||
       (item.opposingParty || '').toLowerCase().includes(q),
     );
@@ -84,9 +85,12 @@ export class CasesComponent {
     this.form.update((current) => ({ ...current, [key]: value }));
   }
 
+  names(items?: {name:string}[],fallback?:string|null){return items?.map(x=>x.name).join('، ') || fallback || '—';}
+  toggle(key:'clientIds'|'lawyerIds',id:number){const ids=this.form()[key]||[];this.updateForm(key,ids.includes(id)?ids.filter(x=>x!==id):[...ids,id]);}
+  lawyers(){return this.users().filter(u=>['lawyer','admin','owner'].includes(u.role));}
   create() {
     const payload = this.form();
-    if (!payload.caseNumber.trim() || !payload.clientId) return;
+    if (!payload.caseNumber.trim() || !payload.clientIds?.length) return;
 
     this.saving.set(true);
     this.api.createCase(payload).subscribe({
@@ -99,7 +103,7 @@ export class CasesComponent {
           type: 'civil',
           court: '',
           division: '',
-          clientId: 0,
+          clientIds: [], lawyerIds: [], clientId: 0,
           leadLawyerId: undefined,
           status: 'new',
           opposingParty: '',

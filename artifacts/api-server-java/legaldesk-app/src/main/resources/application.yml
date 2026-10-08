@@ -8,6 +8,10 @@ server:
         secure: ${SESSION_COOKIE_SECURE:false}
 
 spring:
+  servlet:
+    multipart:
+      max-file-size: 20MB
+      max-request-size: 55MB
   application:
     name: legaldesk-backend
   datasource:
@@ -38,3 +42,9 @@ management:
 logging:
   level:
     root: INFO
+
+app:
+  currency: ${APP_CURRENCY:SAR}
+  public-url: ${APP_PUBLIC_URL:http://localhost:4020}
+  settings-key-file: ${APP_SETTINGS_KEY_FILE:.data/settings.key}
+  vapid-subject: ${VAPID_SUBJECT:mailto:admin@example.com}

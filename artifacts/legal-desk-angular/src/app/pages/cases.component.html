@@ -29,22 +29,12 @@
           </select>
         </div>
         <div>
-          <label class="label">الموكل *</label>
-          <select class="select" [ngModel]="form().clientId" (ngModelChange)="updateForm('clientId', +$event)">
-            <option [ngValue]="0">اختر الموكل</option>
-            @for (client of clients(); track client.id) {
-              <option [ngValue]="client.id">{{ client.name }}</option>
-            }
-          </select>
+          <label class="label">الموكلون * — يمكن اختيار أكثر من موكل</label>
+          @for(client of clients();track client.id){<label style="display:block"><input type="checkbox" [checked]="form().clientIds?.includes(client.id)" (change)="toggle('clientIds',client.id)"> {{client.name}}</label>}
         </div>
         <div>
-          <label class="label">المحامي المسؤول</label>
-          <select class="select" [ngModel]="form().leadLawyerId ?? ''" (ngModelChange)="updateForm('leadLawyerId', $event ? +$event : undefined)">
-            <option value="">اختر المحامي</option>
-            @for (user of users(); track user.id) {
-              <option [value]="user.id">{{ user.name }}</option>
-            }
-          </select>
+          <label class="label">المحامون — يمكن اختيار أكثر من محامٍ</label>
+          @for(user of lawyers();track user.id){<label style="display:block"><input type="checkbox" [checked]="form().lawyerIds?.includes(user.id)" (change)="toggle('lawyerIds',user.id)"> {{user.name}}</label>}
         </div>
         <div>
           <label class="label">الحالة</label>
@@ -62,10 +52,7 @@
           <label class="label">الدائرة</label>
           <input class="input" [ngModel]="form().division || ''" (ngModelChange)="updateForm('division', $event)" />
         </div>
-        <div>
-          <label class="label">الخصم</label>
-          <input class="input" [ngModel]="form().opposingParty || ''" (ngModelChange)="updateForm('opposingParty', $event)" />
-        </div>
+
       </div>
       <div class="toolbar" style="margin-top: 16px;">
         <button class="btn btn-secondary" type="button" (click)="showCreate.set(false)">إلغاء</button>
@@ -93,11 +80,11 @@
         <thead>
           <tr>
             <th>رقم القضية</th>
-            <th>الموكل</th>
+            <th>الموكلون</th>
             <th>المحكمة</th>
             <th>النوع</th>
             <th>الحالة</th>
-            <th>المحامي</th>
+            <th>المحامون</th>
             <th></th>
           </tr>
         </thead>
@@ -108,12 +95,12 @@
                 <strong>{{ item.caseNumber }}</strong>
                 <div class="meta">{{ item.courtCaseNumber || '—' }}</div>
               </td>
-              <td>{{ item.clientName || ('#' + item.clientId) }}</td>
+              <td>{{ names(item.clients,item.clientName) }}</td>
               <td>{{ item.court || '—' }}</td>
               <td><span class="badge badge-soft">{{ typeLabels[item.type] || item.type }}</span></td>
               <td><span class="badge badge-neutral">{{ statusLabels[item.status] || item.status }}</span></td>
-              <td>{{ item.leadLawyerName || '—' }}</td>
-              <td><button class="btn btn-danger" type="button" (click)="remove(item)">حذف</button></td>
+              <td>{{ names(item.lawyers,item.leadLawyerName) }}</td>
+              <td><div class="toolbar"><a class="btn btn-secondary" [routerLink]="['/case-workspace',item.id]">متابعة الموكل والجلسات والأتعاب</a><button class="btn btn-danger" type="button" (click)="remove(item)">حذف</button></div></td>
             </tr>
           }
         </tbody>

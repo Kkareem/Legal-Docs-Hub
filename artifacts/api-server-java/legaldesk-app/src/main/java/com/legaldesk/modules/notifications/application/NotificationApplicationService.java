@@ -23,12 +23,14 @@ public class NotificationApplicationService {
     public List<NotificationResponse> list(Boolean unreadOnly) {
         Long userId = currentUserFacade.currentUserId();
         return repository.findByUserIdOrderByCreatedAtAsc(userId).stream()
+                .filter(NotificationEntity::isSiteVisible)
                 .filter(entity -> unreadOnly == null || !unreadOnly || !entity.isRead())
                 .map(this::toResponse)
                 .toList();
     }
     public NotificationResponse markRead(Long id) {
         NotificationEntity entity = repository.findById(id).orElseThrow(() -> new NotFoundException("Notification not found"));
+        if(!entity.getUserId().equals(currentUserFacade.currentUserId()) || !entity.isSiteVisible())throw new NotFoundException("Notification not found");
         entity.setRead(true);
         return toResponse(repository.save(entity));
     }

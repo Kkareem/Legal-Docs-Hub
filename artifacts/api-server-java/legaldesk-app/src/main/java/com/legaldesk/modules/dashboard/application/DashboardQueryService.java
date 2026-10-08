@@ -75,7 +75,7 @@ public class DashboardQueryService {
         OffsetDateTime endToday = startToday.plusDays(1);
         OffsetDateTime in7Days = now.plusDays(7);
         BigDecimal totalPendingPayments = payments.stream()
-                .filter(payment -> "pending".equals(payment.getStatus()) || "overdue".equals(payment.getStatus()))
+                .filter(payment -> "pending".equals(payment.getStatus()) || "under_review".equals(payment.getStatus()) || "overdue".equals(payment.getStatus()))
                 .map(payment -> payment.getAmount() == null ? BigDecimal.ZERO : payment.getAmount())
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
         return new DashboardSummaryResponse(

@@ -1,4 +1,13 @@
 <section class="page-shell">
+  @if(accountMessage()){<p role="status">{{accountMessage()}}</p>}
+  @if(accountClient();as account){
+  <form class="card panel grid" style="margin-bottom:20px" #accountForm="ngForm" (ngSubmit)="createAccount()">
+    <h2>إنشاء حساب للموكل {{account.name}}</h2>
+    <label>بريد تسجيل الدخول<input class="input" type="email" name="accountEmail" [(ngModel)]="accountEmail" required email></label>
+    <label>كلمة المرور المؤقتة<input class="input" type="password" name="accountPassword" [(ngModel)]="accountPassword" required minlength="10" maxlength="128" autocomplete="new-password"></label>
+    <p class="meta">سيطلب من الموكل تغيير كلمة المرور عند أول دخول.</p>
+    <div class="toolbar"><button class="btn btn-primary" [disabled]="accountForm.invalid||saving()">إنشاء الحساب</button><button class="btn btn-secondary" type="button" (click)="accountClient.set(null)">إلغاء</button></div>
+  </form>}
   <div class="toolbar" style="margin-bottom: 18px;">
     <div class="toolbar-spacer">
       <h1 class="section-title">الموكلون</h1>
@@ -95,7 +104,7 @@
               <td>{{ client.email || '—' }}</td>
               <td>{{ client.serviceType || '—' }}</td>
               <td><span class="badge badge-soft">{{ statusLabels[client.status] || client.status }}</span></td>
-              <td><button class="btn btn-danger" type="button" (click)="remove(client)">حذف</button></td>
+              <td><div class="toolbar">@if(!client.userId){<button class="btn btn-secondary" type="button" (click)="openAccount(client)">إنشاء حساب للموكل</button>}@else{<span class="badge badge-success">حساب البوابة مرتبط</span>}<button class="btn btn-danger" type="button" (click)="remove(client)">حذف</button></div></td>
             </tr>
           }
         </tbody>

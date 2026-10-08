@@ -20,6 +20,8 @@ import {
 
 @Injectable({ providedIn: 'root' })
 export class ApiService {
+  removePushSubscription(endpoint:string){return this.http.delete<void>('/api/notifications/subscriptions',{...this.options(),body:{endpoint}});}
+
   createLawyer(body: {name:string;email:string;phone:string;password:string;role:string}) {
     return this.http.post<User>('/api/users',body,this.options());
   }

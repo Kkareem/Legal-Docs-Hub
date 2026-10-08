@@ -18,6 +18,8 @@ public record CaseResponse(
         String description,
         Long officeId,
         OffsetDateTime createdAt,
-        OffsetDateTime updatedAt
+        OffsetDateTime updatedAt,
+        java.util.List<java.util.Map<String,Object>> clients,
+        java.util.List<java.util.Map<String,Object>> lawyers
 ) {
 }

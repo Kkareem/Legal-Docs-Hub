@@ -21,7 +21,7 @@ export class ChangePasswordComponent {
  submit(){if(this.password!==this.confirm){this.error.set('كلمتا المرور غير متطابقتين');return;}if(this.busy())return;
  this.busy.set(true);this.error.set('');
  this.api.changePassword({currentPassword:this.current,newPassword:this.password}).subscribe({
- next:user=>{this.auth.user.set(user);this.busy.set(false);void this.router.navigateByUrl('/dashboard');},
+ next:user=>{this.auth.user.set(user);this.busy.set(false);void this.router.navigateByUrl(user.role==='client'?'/my-account':'/dashboard');},
  error:()=>{this.busy.set(false);this.error.set('تعذر التغيير. تحقق من كلمة المرور الحالية واختر كلمة جديدة مختلفة من 10 أحرف على الأقل.');}
  });}
 }

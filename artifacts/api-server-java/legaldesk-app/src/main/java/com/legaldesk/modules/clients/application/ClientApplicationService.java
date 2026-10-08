@@ -20,6 +20,7 @@ public class ClientApplicationService {
 
     private final ClientEntityRepository repository;
     private final CaseEntityRepository caseRepository;
+    @org.springframework.beans.factory.annotation.Autowired private org.springframework.jdbc.core.JdbcTemplate jdbc;
     private final PaymentEntityRepository paymentRepository;
 
     public ClientApplicationService(
@@ -77,14 +78,14 @@ public class ClientApplicationService {
     @Transactional(readOnly = true)
     public ClientSummaryResponse summary(Long id) {
         findEntity(id);
-        var cases = caseRepository.findByClientId(id);
+        var cases = caseRepository.findAllById(jdbc.queryForList("SELECT case_id FROM case_clients WHERE client_id=?",Long.class,id));
         var payments = paymentRepository.findByClientId(id);
         BigDecimal totalPaid = payments.stream()
                 .filter(payment -> "paid".equals(payment.getStatus()))
                 .map(payment -> payment.getAmount() == null ? BigDecimal.ZERO : payment.getAmount())
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
         BigDecimal totalDue = payments.stream()
-                .filter(payment -> "pending".equals(payment.getStatus()) || "overdue".equals(payment.getStatus()))
+                .filter(payment -> "pending".equals(payment.getStatus()) || "under_review".equals(payment.getStatus()) || "overdue".equals(payment.getStatus()))
                 .map(payment -> payment.getAmount() == null ? BigDecimal.ZERO : payment.getAmount())
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
         long activeCases = cases.stream().filter(c -> "active".equals(c.getStatus()) || "upcoming_hearing".equals(c.getStatus())).count();

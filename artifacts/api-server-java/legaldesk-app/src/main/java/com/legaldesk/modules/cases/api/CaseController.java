@@ -46,7 +46,7 @@ public class CaseController {
     }
 
     @PatchMapping("/{id}")
-    public CaseResponse update(@PathVariable("id") Long id, @RequestBody UpdateCaseRequest request) {
+    public CaseResponse update(@PathVariable("id") Long id, @Valid @RequestBody UpdateCaseRequest request) {
         return service.update(id, request);
     }
 

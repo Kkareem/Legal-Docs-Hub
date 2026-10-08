@@ -9,10 +9,12 @@ public record CreateCaseRequest(
         @NotBlank String type,
         String court,
         String division,
-        @NotNull Long clientId,
+        Long clientId,
         Long leadLawyerId,
         String status,
         String opposingParty,
-        String description
+        String description,
+        @jakarta.validation.constraints.Size(max=100) java.util.List<@jakarta.validation.constraints.NotNull Long> clientIds,
+        @jakarta.validation.constraints.Size(max=100) java.util.List<@jakarta.validation.constraints.NotNull Long> lawyerIds
 ) {
 }

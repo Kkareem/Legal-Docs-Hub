@@ -1,6 +1,6 @@
 import { Injectable, computed, inject, signal } from '@angular/core';
 import { Router } from '@angular/router';
-import { catchError, map, Observable, of, tap } from 'rxjs';
+import { catchError, map, Observable, of, tap, from, switchMap,firstValueFrom } from 'rxjs';
 import { ApiService } from './api.service';
 import { LoginBody, User } from './models';
 
@@ -45,13 +45,16 @@ export class AuthService {
         this.user.set(user);
         this.ready.set(true);
         this.loading.set(false);
-        void this.router.navigateByUrl(user.mustChangePassword ? '/change-password' : '/dashboard');
+        void this.router.navigateByUrl(user.mustChangePassword ? '/change-password' : user.role==='client' ? '/my-account' : '/dashboard');
       }),
     );
   }
 
+  private async clearBrowserSubscription(){
+    try{if('serviceWorker' in navigator){const registration=await navigator.serviceWorker.getRegistration('/notifications-sw.js');const subscription=await registration?.pushManager.getSubscription();if(subscription){try{await firstValueFrom(this.api.removePushSubscription(subscription.endpoint));}finally{await subscription.unsubscribe();}}}}catch{}
+  }
   logout(): Observable<void> {
-    return this.api.logout().pipe(
+    return from(this.clearBrowserSubscription()).pipe(switchMap(()=>this.api.logout()),
       tap(() => {
         this.user.set(null);
         this.ready.set(true);

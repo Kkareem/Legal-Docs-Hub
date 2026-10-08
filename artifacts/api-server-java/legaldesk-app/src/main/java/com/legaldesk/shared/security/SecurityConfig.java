@@ -40,7 +40,9 @@ public class SecurityConfig {
                                 "/swagger-ui/**",
                                 "/swagger-ui.html"
                         ).permitAll()
-                        .anyRequest().authenticated()
+                        .requestMatchers("/api/notifications/**","/api/settings/application").authenticated()
+                        .requestMatchers("/api/client-portal/**").hasRole("CLIENT")
+                        .anyRequest().hasAnyRole("ADMIN","OWNER","LAWYER")
                 )
                 .sessionManagement(Customizer.withDefaults())
                 .httpBasic(httpBasic -> httpBasic.disable())

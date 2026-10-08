@@ -1,1 +1,2 @@
+@if(auth.user();as user){@if(!user.mustChangePassword){<nav class="account-toolbar" aria-label="إعدادات الحساب والإشعارات"><a routerLink="/notifications" class="btn btn-secondary">الإشعارات <span class="badge badge-warning" aria-live="polite">{{notices.unread()}}</span></a><a routerLink="/settings" class="btn btn-secondary">الإعدادات</a><button class="btn btn-secondary" (click)="logout()">تسجيل الخروج</button></nav>}}
 <router-outlet />

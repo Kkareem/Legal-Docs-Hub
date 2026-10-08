@@ -62,6 +62,8 @@ export interface CaseItem {
   division?: string | null;
   clientId: number;
   clientName?: string | null;
+  clients?: {id:number;name:string}[];
+  lawyers?: {id:number;name:string}[];
   leadLawyerId?: number | null;
   leadLawyerName?: string | null;
   status: 'new' | 'active' | 'upcoming_hearing' | 'verdict' | 'adjourned' | 'closed';
@@ -73,6 +75,8 @@ export interface CaseItem {
 }
 
 export interface CreateCaseBody {
+  clientIds?: number[];
+  lawyerIds?: number[];
   caseNumber: string;
   courtCaseNumber?: string | null;
   type: CaseItem['type'];

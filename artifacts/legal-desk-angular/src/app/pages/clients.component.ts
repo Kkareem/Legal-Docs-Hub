@@ -3,6 +3,7 @@ import { Component, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { ApiService } from '../core/api.service';
 import { Client, CreateClientBody } from '../core/models';
+import {PortalApiService} from '../core/portal-api.service';
 
 @Component({
   selector: 'app-clients',
@@ -11,6 +12,15 @@ import { Client, CreateClientBody } from '../core/models';
   templateUrl: './clients.component.html',
 })
 export class ClientsComponent {
+  private portal=inject(PortalApiService);
+  accountClient=signal<Client|null>(null);accountEmail='';accountPassword='';accountMessage=signal('');
+  openAccount(client:Client){this.accountClient.set(client);this.accountEmail=client.email||'';this.accountPassword='';this.accountMessage.set('');}
+  createAccount(){const client=this.accountClient();if(!client||this.saving())return;this.saving.set(true);
+    this.portal.createAccount(client.id,this.accountEmail,this.accountPassword).subscribe({
+      next:()=>{this.saving.set(false);this.accountPassword='';this.accountClient.set(null);this.accountMessage.set('تم إنشاء الحساب. سلم الموكل البريد وكلمة المرور المؤقتة؛ سيغيرها عند أول دخول.');this.refresh();},
+      error:()=>{this.saving.set(false);this.accountMessage.set('تعذر إنشاء الحساب. تحقق من البريد وكلمة المرور والصلاحية؛ المحامي ينشئ حسابًا لموكل قضية مسندة إليه فقط.');}
+    });
+  }
   private readonly api = inject(ApiService);
 
   readonly loading = signal(true);

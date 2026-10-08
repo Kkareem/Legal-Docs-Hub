@@ -14,15 +14,17 @@ import org.springframework.transaction.annotation.Transactional;
 @Service
 @Transactional
 public class PowerOfAttorneyApplicationService {
+    private final com.legaldesk.modules.cases.application.CaseAccessService caseAccess;
     private final PowerOfAttorneyEntityRepository repository;
     private final ReferenceLookupService referenceLookupService;
-    public PowerOfAttorneyApplicationService(PowerOfAttorneyEntityRepository repository, ReferenceLookupService referenceLookupService) {
+    public PowerOfAttorneyApplicationService(PowerOfAttorneyEntityRepository repository, ReferenceLookupService referenceLookupService, com.legaldesk.modules.cases.application.CaseAccessService caseAccess) {
         this.repository = repository;
+        this.caseAccess = caseAccess;
         this.referenceLookupService = referenceLookupService;
     }
     @Transactional(readOnly = true)
     public List<PowerOfAttorneyResponse> list(String status, Long receivedBy) {
-        return enrich(repository.findAllByOrderByCreatedAtAsc()).stream()
+        return enrich(repository.findAllByOrderByCreatedAtAsc()).stream().filter(x -> x.caseId()==null || caseAccess.allowed(x.caseId()))
                 .filter(p -> status == null || status.equals(p.status()))
                 .filter(p -> receivedBy == null || receivedBy.equals(p.receivedBy()))
                 .toList();
@@ -32,9 +34,11 @@ public class PowerOfAttorneyApplicationService {
     public PowerOfAttorneyResponse create(PowerOfAttorneyUpsertRequest request) { PowerOfAttorneyEntity entity = new PowerOfAttorneyEntity(); apply(entity, request, true); return enrichOne(repository.save(entity)); }
     public PowerOfAttorneyResponse update(Long id, PowerOfAttorneyUpsertRequest request) { PowerOfAttorneyEntity entity = findEntity(id); apply(entity, request, false); return enrichOne(repository.save(entity)); }
     public void delete(Long id) { repository.delete(findEntity(id)); }
-    private PowerOfAttorneyEntity findEntity(Long id) { return repository.findById(id).orElseThrow(() -> new NotFoundException("Power of attorney not found")); }
+    private PowerOfAttorneyEntity findEntity(Long id) { PowerOfAttorneyEntity entity=repository.findById(id).orElseThrow(() -> new NotFoundException("Power of attorney not found"));if(entity.getCaseId()!=null)caseAccess.require(entity.getCaseId());return entity; }
     private void apply(PowerOfAttorneyEntity entity, PowerOfAttorneyUpsertRequest request, boolean creating) {
         if (creating || request.clientId() != null) entity.setClientId(request.clientId());
+        if(request.caseId()!=null)caseAccess.require(request.caseId());
+        if(entity.getCaseId()!=null)caseAccess.require(entity.getCaseId());
         if (creating || request.caseId() != null) entity.setCaseId(request.caseId());
         if (creating || request.receivedBy() != null) entity.setReceivedBy(request.receivedBy());
         if (creating || request.handedBy() != null) entity.setHandedBy(request.handedBy());
