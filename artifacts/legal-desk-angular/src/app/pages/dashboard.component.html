@@ -11,6 +11,14 @@
   } @else {
     <div class="stats-grid" style="margin-top: 24px;">
       <div class="card stat-card">
+        <div class="meta">زوار صفحة الاستشارات (متصفحات فريدة)</div>
+        <div class="stat-value">{{ summary()?.totalVisitors ?? 0 }}</div>
+      </div>
+      <div class="card stat-card">
+        <div class="meta">الاستشارات المعلقة</div>
+        <div class="stat-value">{{ summary()?.pendingConsultations ?? 0 }}</div>
+      </div>
+      <div class="card stat-card">
         <div class="meta">القضايا النشطة</div>
         <div class="stat-value">{{ summary()?.activeCases ?? 0 }}</div>
       </div>

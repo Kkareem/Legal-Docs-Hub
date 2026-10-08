@@ -22,8 +22,10 @@ public class AuthApplicationService {
 
     private final AuthenticationManager authenticationManager;
     private final UserEntityRepository userRepository;
+    private final org.springframework.security.crypto.password.PasswordEncoder encoder;
 
-    public AuthApplicationService(AuthenticationManager authenticationManager, UserEntityRepository userRepository) {
+    public AuthApplicationService(AuthenticationManager authenticationManager, UserEntityRepository userRepository, org.springframework.security.crypto.password.PasswordEncoder encoder) {
+        this.encoder = encoder;
         this.authenticationManager = authenticationManager;
         this.userRepository = userRepository;
     }
@@ -36,6 +38,7 @@ public class AuthApplicationService {
         SecurityContext context = SecurityContextHolder.createEmptyContext();
         context.setAuthentication(authentication);
         SecurityContextHolder.setContext(context);
+        if (servletRequest.getSession(false) != null) servletRequest.changeSessionId();
         servletRequest.getSession(true)
                 .setAttribute(HttpSessionSecurityContextRepository.SPRING_SECURITY_CONTEXT_KEY, context);
 
@@ -63,6 +66,21 @@ public class AuthApplicationService {
         SecurityContextHolder.clearContext();
     }
 
+    @org.springframework.transaction.annotation.Transactional
+    public AuthUserResponse changePassword(com.legaldesk.modules.auth.api.ChangePasswordRequest request, Authentication authentication) {
+        if (authentication == null || !(authentication.getPrincipal() instanceof AppUserPrincipal principal))
+            throw new org.springframework.security.authentication.BadCredentialsException("Not authenticated");
+        UserEntity user = userRepository.findById(principal.id()).orElseThrow(() -> new NotFoundException("User not found"));
+        if (!user.isActive() || !encoder.matches(request.currentPassword(), user.getPasswordHash()))
+            throw new org.springframework.security.authentication.BadCredentialsException("Invalid current password");
+        if (encoder.matches(request.newPassword(), user.getPasswordHash()))
+            throw new com.legaldesk.common.domain.BusinessRuleViolationException("Choose a different password");
+        user.setPasswordHash(encoder.encode(request.newPassword()));
+        user.setMustChangePassword(false);
+        userRepository.save(user);
+        return toAuthUser(user);
+    }
+
     private AuthUserResponse toAuthUser(UserEntity user) {
         return new AuthUserResponse(
                 user.getId(),
@@ -70,7 +88,8 @@ public class AuthApplicationService {
                 user.getEmail(),
                 user.getPhone(),
                 user.getRole(),
-                user.isActive()
+                user.isActive(),
+                user.isMustChangePassword()
         );
     }
 }

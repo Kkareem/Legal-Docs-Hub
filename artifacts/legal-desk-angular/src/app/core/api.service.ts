@@ -20,6 +20,31 @@ import {
 
 @Injectable({ providedIn: 'root' })
 export class ApiService {
+  createLawyer(body: {name:string;email:string;phone:string;password:string;role:string}) {
+    return this.http.post<User>('/api/users',body,this.options());
+  }
+  changePassword(body: {currentPassword:string;newPassword:string}) {
+    return this.http.post<User>('/api/auth/change-password',body,this.options());
+  }
+  recordVisit(visitorId:string) { return this.http.post<void>('/api/public/visits',{visitorId}); }
+  submitConsultation(body: {name:string;email:string;phone:string;summary:string}) {
+    return this.http.post<{id:number;token:string}>('/api/public/consultations',body);
+  }
+  trackConsultation(body: {id:number|null;token:string}) {
+    return this.http.post<import('./models').ConsultationTracking>('/api/public/consultations/track',body);
+  }
+  replyAsVisitor(body: {id:number;token:string;response:string}) {
+    return this.http.post<import('./models').ConsultationTracking>('/api/public/consultations/reply',body);
+  }
+  listConsultationRequests() {
+    return this.http.get<import('./models').ConsultationRequest[]>('/api/consultation-requests',this.options());
+  }
+  assignConsultation(id:number,assigneeIds:number[]) {
+    return this.http.patch<void>('/api/consultation-requests/'+id+'/assign',{assigneeIds},this.options());
+  }
+  replyConsultation(id:number,response:string) {
+    return this.http.post<void>('/api/consultation-requests/'+id+'/reply',{response},this.options());
+  }
   private readonly http = inject(HttpClient);
   private readonly apiBase = '/api';
 

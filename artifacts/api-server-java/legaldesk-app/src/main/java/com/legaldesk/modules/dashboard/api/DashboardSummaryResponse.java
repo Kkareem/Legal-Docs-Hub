@@ -4,6 +4,7 @@ import java.math.BigDecimal;
 import java.util.List;
 
 public record DashboardSummaryResponse(
+        long totalVisitors,
         long activeCases,
         long totalClients,
         long pendingTasks,

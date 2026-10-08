@@ -1,4 +1,5 @@
 export interface User {
+  mustChangePassword?: boolean;
   id: number;
   name: string;
   email: string;
@@ -148,6 +149,7 @@ export interface PaymentSummary {
 }
 
 export interface DashboardSummary {
+  totalVisitors: number;
   activeCases: number;
   totalClients: number;
   pendingTasks: number;
@@ -158,4 +160,19 @@ export interface DashboardSummary {
   powersOfAttorneyOut: number;
   overduePoAs: number;
   casesByStatus: CountByLabel[];
+}
+
+export interface ConsultationRequest {
+ assignees: Array<{id:number;name:string;active:boolean}>;
+ messages: ConsultationMessage[]; canReply: boolean;
+ id: number; name: string; email: string; phone: string; summary: string;
+ status: string; assigned_to: number | null; response: string | null; assignee_name: string | null;
+}
+export interface ConsultationMessage {
+ sender_name?: string | null;
+ id: number; sender_type: 'staff' | 'visitor'; body: string; created_at: string;
+}
+export interface ConsultationTracking {
+ id: number; summary: string; status: string; response: string | null;
+ messages: ConsultationMessage[]; canReply: boolean;
 }

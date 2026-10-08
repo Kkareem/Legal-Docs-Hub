@@ -45,7 +45,7 @@ export class AuthService {
         this.user.set(user);
         this.ready.set(true);
         this.loading.set(false);
-        void this.router.navigateByUrl('/dashboard');
+        void this.router.navigateByUrl(user.mustChangePassword ? '/change-password' : '/dashboard');
       }),
     );
   }

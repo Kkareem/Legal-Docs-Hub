@@ -19,6 +19,8 @@ export class ShellComponent {
     { path: '/clients', label: 'الموكلون' },
     { path: '/cases', label: 'القضايا' },
     { path: '/tasks', label: 'المهام' },
+    ...(['admin','owner'].includes(this.user()?.role || '') ? [{path:'/lawyers',label:'إدارة المحامين'}] : []),
+    ...(['admin','owner','lawyer'].includes(this.user()?.role || '') ? [{path:'/consultation-requests',label:'طلبات الاستشارات'}] : []),
   ]);
 
   logout() {

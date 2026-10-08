@@ -16,6 +16,7 @@ import org.springframework.web.bind.annotation.RestController;
 
 @RestController
 @RequestMapping("/api/users")
+@org.springframework.security.access.prepost.PreAuthorize("hasAnyRole('ADMIN','OWNER')")
 public class UserController {
 
     private final UserApplicationService service;
@@ -25,6 +26,7 @@ public class UserController {
     }
 
     @GetMapping
+    @org.springframework.security.access.prepost.PreAuthorize("hasAnyRole('ADMIN','OWNER','LAWYER')")
     public List<UserResponse> list() {
         return service.list();
     }

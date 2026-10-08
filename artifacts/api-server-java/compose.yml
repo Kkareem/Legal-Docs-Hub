@@ -1,0 +1,19 @@
+services:
+  postgres:
+    image: postgres:17
+    environment:
+      POSTGRES_DB: legaldesk
+      POSTGRES_USER: legaldesk
+      POSTGRES_PASSWORD: legaldesk
+    ports:
+      - "127.0.0.1:5432:5432"
+    volumes:
+      - legaldesk-postgres:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U legaldesk -d legaldesk"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+volumes:
+  legaldesk-postgres:

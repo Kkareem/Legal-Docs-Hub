@@ -34,9 +34,14 @@ public class UserApplicationService {
     }
 
     public UserResponse create(CreateUserRequest request) {
+        if (!java.util.Set.of("lawyer", "admin", "owner", "client").contains(request.role()))
+            throw new com.legaldesk.common.domain.BusinessRuleViolationException("Invalid role");
+        if (repository.findByEmailIgnoreCase(request.email().trim()).isPresent())
+            throw new com.legaldesk.common.domain.BusinessRuleViolationException("Email already exists");
         UserEntity entity = new UserEntity();
         entity.setName(request.name());
-        entity.setEmail(request.email());
+        entity.setEmail(request.email().trim().toLowerCase(java.util.Locale.ROOT));
+        entity.setMustChangePassword(true);
         entity.setPasswordHash(passwordEncoder.encode(request.password()));
         entity.setPhone(request.phone());
         entity.setRole(request.role());
@@ -52,6 +57,7 @@ public class UserApplicationService {
         if (request.active() != null) entity.setActive(request.active());
         if (request.password() != null && !request.password().isBlank()) {
             entity.setPasswordHash(passwordEncoder.encode(request.password()));
+            entity.setMustChangePassword(true);
         }
         return toResponse(repository.save(entity));
     }

@@ -42,4 +42,9 @@ public class AuthController {
         authApplicationService.logout(request);
         return ResponseEntity.ok(Map.of("ok", true));
     }
+
+    @PostMapping("/change-password")
+    public AuthUserResponse changePassword(@Valid @RequestBody ChangePasswordRequest request, Authentication authentication) {
+        return authApplicationService.changePassword(request, authentication);
+    }
 }

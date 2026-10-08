@@ -29,6 +29,8 @@ import org.springframework.transaction.annotation.Transactional;
 @Service
 @Transactional(readOnly = true)
 public class DashboardQueryService {
+    @org.springframework.beans.factory.annotation.Autowired
+    private org.springframework.jdbc.core.JdbcTemplate jdbc;
     private final CaseEntityRepository caseRepository;
     private final ClientEntityRepository clientRepository;
     private final TaskEntityRepository taskRepository;
@@ -77,13 +79,14 @@ public class DashboardQueryService {
                 .map(payment -> payment.getAmount() == null ? BigDecimal.ZERO : payment.getAmount())
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
         return new DashboardSummaryResponse(
+                jdbc.queryForObject("SELECT COUNT(*) FROM site_visitors", Long.class),
                 cases.stream().filter(c -> "active".equals(c.getStatus()) || "upcoming_hearing".equals(c.getStatus())).count(),
                 clientRepository.count(),
                 tasks.stream().filter(t -> "new".equals(t.getStatus()) || "in_progress".equals(t.getStatus())).count(),
                 tasks.stream().filter(t -> t.getDueDate() != null && t.getDueDate().isBefore(now) && !"done".equals(t.getStatus()) && !"cancelled".equals(t.getStatus())).count(),
                 hearings.stream().filter(h -> !h.getDatetime().isBefore(startToday) && h.getDatetime().isBefore(endToday)).count(),
                 hearings.stream().filter(h -> !h.getDatetime().isBefore(now) && !h.getDatetime().isAfter(in7Days)).count(),
-                consultations.stream().filter(c -> "pending".equals(c.getStatus()) || "under_review".equals(c.getStatus())).count(),
+                consultations.stream().filter(c -> "pending".equals(c.getStatus()) || "under_review".equals(c.getStatus())).count() + jdbc.queryForObject("SELECT COUNT(*) FROM consultation_requests WHERE status='pending'", Long.class),
                 totalPendingPayments,
                 poas.stream().filter(p -> "with_lawyer".equals(p.getStatus())).count(),
                 poas.stream().filter(p -> "overdue".equals(p.getStatus()) || (p.getReturnBy() != null && p.getReturnBy().isBefore(now) && !"returned".equals(p.getStatus()))).count(),

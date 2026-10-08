@@ -9,6 +9,11 @@ import jakarta.persistence.Table;
 @Table(name = "users")
 public class UserEntity extends AuditedEntity {
 
+    @Column(name = "must_change_password", nullable = false)
+    private boolean mustChangePassword;
+    public boolean isMustChangePassword() { return mustChangePassword; }
+    public void setMustChangePassword(boolean value) { mustChangePassword = value; }
+
     @Column(nullable = false)
     private String name;
 

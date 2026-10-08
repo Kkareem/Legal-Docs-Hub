@@ -460,7 +460,7 @@ ApiExceptionHandler"]
     end
 
     subgraph Data["Data Layer"]
-        DB["PostgreSQL / H2 local
+        DB["PostgreSQL
 Flyway schema"]
     end
 
