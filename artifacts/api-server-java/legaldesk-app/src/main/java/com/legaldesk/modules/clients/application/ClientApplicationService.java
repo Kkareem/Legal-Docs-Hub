@@ -18,6 +18,8 @@ import org.springframework.transaction.annotation.Transactional;
 @Transactional
 public class ClientApplicationService {
 
+    @org.springframework.beans.factory.annotation.Autowired private com.legaldesk.modules.users.infrastructure.UserEntityRepository users;
+    @org.springframework.beans.factory.annotation.Autowired private com.legaldesk.modules.consultations.application.ConsultationContactLinker linker;
     private final ClientEntityRepository repository;
     private final CaseEntityRepository caseRepository;
     @org.springframework.beans.factory.annotation.Autowired private org.springframework.jdbc.core.JdbcTemplate jdbc;
@@ -39,7 +41,9 @@ public class ClientApplicationService {
                 .filter(entity -> status == null || status.equals(entity.getStatus()))
                 .filter(entity -> search == null || search.isBlank()
                         || entity.getName().toLowerCase().contains(search.toLowerCase())
-                        || (entity.getPhone() != null && entity.getPhone().contains(search)))
+                        || (entity.getPhone() != null && entity.getPhone().contains(search))
+                        || (entity.getEmail()!=null&&entity.getEmail().toLowerCase().contains(search.toLowerCase()))
+                        || (entity.getNationalId()!=null&&entity.getNationalId().contains(search)))
                 .map(this::toResponse)
                 .toList();
     }
@@ -99,13 +103,24 @@ public class ClientApplicationService {
     private void apply(ClientEntity entity, String name, String phone, String email, String nationalId,
                        String address, String status, String serviceType, String notes, Long userId) {
         entity.setName(name);
-        entity.setPhone(phone);
-        entity.setEmail(email);
+        entity.setPhone(com.legaldesk.shared.security.ContactDetails.phone(phone));
+        entity.setEmail(com.legaldesk.shared.security.ContactDetails.email(email));
         entity.setNationalId(nationalId);
         entity.setAddress(address);
         entity.setStatus(status != null ? status : "new");
         entity.setServiceType(serviceType);
         entity.setNotes(notes);
+        // User linkage can only be created by the account endpoint, with its identity and ownership checks.
+        if(userId!=null&&!java.util.Objects.equals(userId,entity.getUserId()))throw new com.legaldesk.common.domain.BusinessRuleViolationException("Use the client account endpoint");
+        if(entity.getUserId()!=null){
+          var user=users.findById(entity.getUserId()).orElseThrow(()->new NotFoundException("User not found"));
+          String identity=com.legaldesk.shared.security.ContactDetails.identity(nationalId);
+          if(users.findByNationalId(identity).filter(u->!u.getId().equals(user.getId())).isPresent())throw new com.legaldesk.common.domain.BusinessRuleViolationException("Identity number already exists");
+          if(entity.getEmail()!=null&&users.findByEmailIgnoreCase(entity.getEmail()).filter(u->!u.getId().equals(user.getId())).isPresent())throw new com.legaldesk.common.domain.BusinessRuleViolationException("Email already exists");
+          if(!java.util.Objects.equals(user.getNationalId(),identity))user.setAuthVersion(user.getAuthVersion()+1);
+          user.setNationalId(identity);user.setName(name);user.setEmail(entity.getEmail());user.setPhone(entity.getPhone());users.saveAndFlush(user);
+          linker.link(entity.getId(),entity.getEmail(),entity.getPhone());
+        }
         entity.setUserId(userId);
     }
 

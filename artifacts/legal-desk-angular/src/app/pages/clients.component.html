@@ -3,7 +3,9 @@
   @if(accountClient();as account){
   <form class="card panel grid" style="margin-bottom:20px" #accountForm="ngForm" (ngSubmit)="createAccount()">
     <h2>إنشاء حساب للموكل {{account.name}}</h2>
-    <label>بريد تسجيل الدخول<input class="input" type="email" name="accountEmail" [(ngModel)]="accountEmail" required email></label>
+    <label>رقم الهوية (14 رقمًا)<input class="input" type="text" inputmode="numeric" name="accountIdentity" [(ngModel)]="accountIdentity" required pattern="[0-9]{14}" maxlength="14"></label>
+    <label>البريد الإلكتروني (اختياري)<input class="input" type="email" name="accountEmail" [(ngModel)]="accountEmail" email></label>
+    <label>الهاتف (اختياري)<app-phone-input name="accountPhone" [(ngModel)]="accountPhone"></app-phone-input></label>
     <label>كلمة المرور المؤقتة<input class="input" type="password" name="accountPassword" [(ngModel)]="accountPassword" required minlength="10" maxlength="128" autocomplete="new-password"></label>
     <p class="meta">سيطلب من الموكل تغيير كلمة المرور عند أول دخول.</p>
     <div class="toolbar"><button class="btn btn-primary" [disabled]="accountForm.invalid||saving()">إنشاء الحساب</button><button class="btn btn-secondary" type="button" (click)="accountClient.set(null)">إلغاء</button></div>
@@ -27,7 +29,7 @@
         </div>
         <div>
           <label class="label">الهاتف</label>
-          <input class="input" [ngModel]="form().phone || ''" (ngModelChange)="updateForm('phone', $event)" />
+          <app-phone-input #clientPhone="ngModel" [ngModel]="form().phone || ''" (ngModelChange)="updateForm('phone', $event)"></app-phone-input>
         </div>
         <div>
           <label class="label">البريد الإلكتروني</label>
@@ -54,7 +56,7 @@
       </div>
       <div class="toolbar" style="margin-top: 16px;">
         <button class="btn btn-secondary" type="button" (click)="showCreate.set(false)">إلغاء</button>
-        <button class="btn btn-primary" type="button" (click)="create()" [disabled]="saving()">
+        <button class="btn btn-primary" type="button" (click)="create()" [disabled]="saving() || clientPhone.invalid">
           {{ saving() ? 'جارٍ الحفظ...' : 'حفظ' }}
         </button>
       </div>
@@ -63,7 +65,7 @@
 
   <div class="toolbar" style="margin-bottom: 18px;">
     <div class="toolbar-spacer">
-      <input class="input" placeholder="بحث بالاسم أو الهاتف..." [ngModel]="search()" (ngModelChange)="search.set($event)" />
+      <input class="input" placeholder="بحث بالاسم أو الهوية أو البريد أو الهاتف..." [ngModel]="search()" (ngModelChange)="search.set($event)" />
     </div>
     <select class="select" style="max-width: 180px;" [ngModel]="statusFilter()" (ngModelChange)="statusFilter.set($event)">
       <option value="all">جميع الحالات</option>

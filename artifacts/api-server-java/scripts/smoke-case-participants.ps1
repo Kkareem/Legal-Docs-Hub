@@ -1,4 +1,4 @@
-param([string]$BaseUrl='http://127.0.0.1:8080',[string]$AdminEmail='admin@legaldesk.sa',[string]$AdminPassword='password123')
+param([string]$BaseUrl='http://127.0.0.1:8080',[string]$AdminIdentity='00000000000001',[string]$AdminPassword='password123')
 $ErrorActionPreference='Stop'
 Import-Module Microsoft.PowerShell.Utility
 $admin=[Microsoft.PowerShell.Commands.WebRequestSession]::new()
@@ -13,6 +13,7 @@ $textPath=Join-Path $tempDirectory 'evidence.txt'
 $binaryPath=Join-Path $tempDirectory 'evidence.bin'
 [IO.File]::WriteAllText($textPath,'Synthetic portal attachment')
 [IO.File]::WriteAllBytes($binaryPath,[byte[]](0,1,2,255))
+function New-TestIdentity { return (Get-Random -Minimum 10000000000000L -Maximum 99999999999999L).ToString() }
 function Assert-True($Condition,$Message){if(!$Condition){throw $Message}}
 function Send-Api($Method,$Path,$Body,$Session,$Expected=200,$Form=$null){
  Write-Output "CHECK $Method $Path ($Expected)" | Out-Host
@@ -26,19 +27,19 @@ function Send-Api($Method,$Path,$Body,$Session,$Expected=200,$Form=$null){
 }
 try {
 
- $null=Send-Api POST /api/auth/login @{email=$AdminEmail;password=$AdminPassword} $admin
+ $null=Send-Api POST /api/auth/login @{nationalId=$AdminIdentity;password=$AdminPassword} $admin
  $sessions=@();$lawyers=@();$accounts=@();$clients=@()
  for($i=0;$i -lt 3;$i++){
   $session=[Microsoft.PowerShell.Commands.WebRequestSession]::new()
-  $u=Send-Api POST /api/users @{name="Participants lawyer $i";email="participants-$i-$tag@example.com";role='lawyer';password='Temporary-Test-123'} $admin 201
+  $u=Send-Api POST /api/users @{name="Participants lawyer $i";nationalId=(New-TestIdentity);email="participants-$i-$tag@example.com";role='lawyer';password='Temporary-Test-123'} $admin 201
   $userIds+=[long]$u.id;$lawyers+=$u;$sessions+=$session
-  $null=Send-Api POST /api/auth/login @{email=$u.email;password='Temporary-Test-123'} $session
+  $null=Send-Api POST /api/auth/login @{nationalId=$u.nationalId;password='Temporary-Test-123'} $session
   $null=Send-Api POST /api/auth/change-password @{currentPassword='Temporary-Test-123';newPassword='Private-Lawyer-123'} $session
   $c=Send-Api POST /api/clients @{name="Participants client $i $tag";email="participant-client-$i-$tag@example.com";status='active'} $admin 201
   $clientIds+=[long]$c.id;$clients+=$c
-  $account=Send-Api POST "/api/office-portal/clients/$($c.id)/account" @{email=$c.email;password='Temporary-Test-123'} $admin
+  $account=Send-Api POST "/api/office-portal/clients/$($c.id)/account" @{nationalId=(New-TestIdentity);email=$c.email;password='Temporary-Test-123'} $admin
   $userIds+=[long]$account.id;$cs=[Microsoft.PowerShell.Commands.WebRequestSession]::new();$accounts+=$cs
-  $null=Send-Api POST /api/auth/login @{email=$c.email;password='Temporary-Test-123'} $cs
+  $null=Send-Api POST /api/auth/login @{nationalId=$account.nationalId;password='Temporary-Test-123'} $cs
   $null=Send-Api POST /api/auth/change-password @{currentPassword='Temporary-Test-123';newPassword='Private-Client-123'} $cs
  }
  $case=Send-Api POST /api/cases @{caseNumber="PARTICIPANTS-$tag";type='civil';clientIds=@($clients[0].id,$clients[1].id);lawyerIds=@($lawyers[0].id,$lawyers[1].id);status='active'} $admin 201

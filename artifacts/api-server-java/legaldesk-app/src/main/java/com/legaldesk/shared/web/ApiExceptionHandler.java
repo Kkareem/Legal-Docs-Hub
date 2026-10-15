@@ -17,6 +17,13 @@ import org.springframework.web.bind.annotation.RestControllerAdvice;
 
 @RestControllerAdvice
 public class ApiExceptionHandler {
+    @ExceptionHandler(org.springframework.http.converter.HttpMessageNotReadableException.class)
+    public ResponseEntity<ApiErrorResponse> handleInvalidBody(Exception exception,HttpServletRequest request){return build(HttpStatus.BAD_REQUEST,"Invalid request data",request,List.of());}
+    @ExceptionHandler(org.springframework.security.core.AuthenticationException.class)
+    public ResponseEntity<ApiErrorResponse> handleAuthentication(Exception exception,HttpServletRequest request){return build(HttpStatus.UNAUTHORIZED,"Invalid credentials",request,List.of());}
+    @ExceptionHandler(org.springframework.dao.DataIntegrityViolationException.class)
+    public ResponseEntity<ApiErrorResponse> handleConflict(Exception exception,HttpServletRequest request){return build(HttpStatus.BAD_REQUEST,"A unique identity or contact is already registered, or the record is still in use",request,List.of());}
+
     @ExceptionHandler({org.springframework.web.multipart.support.MissingServletRequestPartException.class, org.springframework.web.bind.MissingServletRequestParameterException.class})
     public ResponseEntity<ApiErrorResponse> handleMissingUpload(Exception exception, HttpServletRequest request) {
         return build(HttpStatus.BAD_REQUEST, "Required upload file or field is missing", request, List.of());

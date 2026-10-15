@@ -13,17 +13,17 @@ import org.springframework.web.multipart.MultipartFile;
 
 @RestController
 public class ClientPortalController {
+ @org.springframework.beans.factory.annotation.Autowired private com.legaldesk.modules.portal.application.HearingProgressService progress;
  private final ClientPortalService service;
  public ClientPortalController(ClientPortalService service){this.service=service;}
- public record Account(@Email @NotBlank String email,@NotBlank @Size(min=10,max=128) String password){}
+ public record Account(@NotBlank @Pattern(regexp="[0-9]{14}") String nationalId,@Email @Size(max=254) String email,@Size(max=40) String phone,@NotBlank @Size(min=10,max=128) String password){}
  public record Review(Long lawyerId,@Min(1) @Max(5) int stars,@Size(max=2000) String comment){}
  public record Update(@NotBlank @Size(max=200) String title,@NotBlank @Size(max=10000) String body,String status){}
  public record Consultation(@NotBlank @Size(min=10,max=10000) String summary,Long caseId){}
- public record Link(@NotNull Long id,@NotNull UUID token){}
  public record Reply(@NotBlank @Size(max=20000) String response){}
  @PostMapping("/api/office-portal/clients/{id}/account")
  @PreAuthorize("hasAnyRole('ADMIN','OWNER','LAWYER')")
- public Map<String,Object> account(@PathVariable("id")long id,@Valid @RequestBody Account r,Authentication a){return service.createAccount(id,r.email(),r.password(),a);}
+ public Map<String,Object> account(@PathVariable("id")long id,@Valid @RequestBody Account r,Authentication a){return service.createAccount(id,r.nationalId(),r.email(),r.phone(),r.password(),a);}
  @GetMapping("/api/client-portal/overview")
  public Map<String,Object> overview(Authentication a){return service.overview(a);}
  @GetMapping("/api/client-portal/cases/{id}")
@@ -59,8 +59,6 @@ public class ClientPortalController {
  public void update(@PathVariable("id")long id,@Valid @RequestBody Update r,Authentication a){service.updateCase(id,r.title(),r.body(),r.status(),a);}
  @PostMapping("/api/client-portal/consultations")
  public Map<String,Long> consultation(@Valid @RequestBody Consultation r,Authentication a){return Map.of("id",service.newConsultation(r.summary(),r.caseId(),a));}
- @PostMapping("/api/client-portal/consultations/link")
- public void link(@Valid @RequestBody Link r,Authentication a){service.linkConsultation(r.id(),r.token(),a);}
  @PostMapping("/api/client-portal/consultations/{id}/reply")
  public void reply(@PathVariable("id")long id,@Valid @RequestBody Reply r,Authentication a){service.consultationReply(id,r.response(),a);}
  public record Bank(@NotBlank @Size(max=200) String bankName,@NotBlank @Size(max=200) String beneficiary,
@@ -94,5 +92,13 @@ public class ClientPortalController {
  @PostMapping("/api/office-portal/cases/{id}/hearings")
  @PreAuthorize("hasAnyRole('ADMIN','OWNER','LAWYER')")
  public void hearing(@PathVariable("id")long id,@Valid @RequestBody Hearing r,Authentication a){service.addHearing(id,r.datetime(),r.court(),r.type(),a);}
+
+ public record HearingReport(@NotBlank @Size(max=10000) String body,@NotNull @Size(max=20) List<com.legaldesk.modules.portal.application.HearingProgressService.Request> requests){}
+ @PostMapping("/api/office-portal/cases/{id}/hearings/{hearing}/reports")
+ @PreAuthorize("hasAnyRole('ADMIN','OWNER','LAWYER')")
+ public void report(@PathVariable("id")long id,@PathVariable("hearing")long hearing,@Valid @RequestBody HearingReport r,Authentication a){progress.report(id,hearing,r.body(),r.requests(),a);}
+ @PostMapping("/api/client-portal/cases/{id}/requests/{request}/complete")
+ @PreAuthorize("hasRole('CLIENT')")
+ public void complete(@PathVariable("id")long id,@PathVariable("request")long request,@RequestParam("notes")String notes,@RequestParam(value="files",required=false)MultipartFile[] files,Authentication a)throws IOException{progress.complete(id,request,notes,files==null?new MultipartFile[0]:files,a);}
 }
 

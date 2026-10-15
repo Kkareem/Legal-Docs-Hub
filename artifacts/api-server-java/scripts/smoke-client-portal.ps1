@@ -1,4 +1,4 @@
-param([string]$BaseUrl='http://127.0.0.1:8080',[string]$AdminEmail='admin@legaldesk.sa',[string]$AdminPassword='password123')
+param([string]$BaseUrl='http://127.0.0.1:8080',[string]$AdminIdentity='00000000000001',[string]$AdminPassword='password123')
 $ErrorActionPreference='Stop'
 Import-Module Microsoft.PowerShell.Utility
 $admin=[Microsoft.PowerShell.Commands.WebRequestSession]::new()
@@ -13,6 +13,7 @@ $textPath=Join-Path $tempDirectory 'evidence.txt'
 $binaryPath=Join-Path $tempDirectory 'evidence.bin'
 [IO.File]::WriteAllText($textPath,'Synthetic portal attachment')
 [IO.File]::WriteAllBytes($binaryPath,[byte[]](0,1,2,255))
+function New-TestIdentity { return (Get-Random -Minimum 10000000000000L -Maximum 99999999999999L).ToString() }
 function Assert-True($Condition,$Message){if(!$Condition){throw $Message}}
 function Send-Api($Method,$Path,$Body,$Session,$Expected=200,$Form=$null){
  Write-Output "CHECK $Method $Path ($Expected)" | Out-Host
@@ -25,28 +26,29 @@ function Send-Api($Method,$Path,$Body,$Session,$Expected=200,$Form=$null){
  if($result.Content){return $result.Content|ConvertFrom-Json}
 }
 try {
- $null=Send-Api POST /api/auth/login @{email=$AdminEmail;password=$AdminPassword} $admin
- $createdLawyer=Send-Api POST /api/users @{name='Portal smoke lawyer';email="portal-lawyer-$tag@example.com";role='lawyer';password='Temporary-Test-123'} $admin 201
+ $null=Send-Api POST /api/auth/login @{nationalId=$AdminIdentity;password=$AdminPassword} $admin
+ $lawyerIdentity=New-TestIdentity;$clientIdentity=New-TestIdentity;$otherIdentity=New-TestIdentity
+ $createdLawyer=Send-Api POST /api/users @{name='Portal smoke lawyer';nationalId=$lawyerIdentity;email="portal-lawyer-$tag@example.com";role='lawyer';password='Temporary-Test-123'} $admin 201
  $userIds+=[long]$createdLawyer.id
- $null=Send-Api POST /api/auth/login @{email="portal-lawyer-$tag@example.com";password='Temporary-Test-123'} $lawyer
+ $null=Send-Api POST /api/auth/login @{nationalId=$lawyerIdentity;password='Temporary-Test-123'} $lawyer
  $null=Send-Api POST /api/auth/change-password @{currentPassword='Temporary-Test-123';newPassword='Private-Lawyer-123'} $lawyer
- $first=Send-Api POST /api/clients @{name="Portal smoke $tag";email="portal-client-$tag@example.com";phone='000';status='active'} $admin 201
- $second=Send-Api POST /api/clients @{name="Other portal smoke $tag";email="portal-other-$tag@example.com";phone='000';status='active'} $admin 201
+ $first=Send-Api POST /api/clients @{name="Portal smoke $tag";email="portal-client-$tag@example.com";phone='01000000000';status='active'} $admin 201
+ $second=Send-Api POST /api/clients @{name="Other portal smoke $tag";email="portal-other-$tag@example.com";phone='01000000000';status='active'} $admin 201
  $clientIds=@([long]$first.id,[long]$second.id)
  $case=Send-Api POST /api/cases @{caseNumber="PORTAL-$tag";type='civil';clientId=$first.id;leadLawyerId=$createdLawyer.id;status='active';court='Synthetic Court'} $admin 201
  $otherCase=Send-Api POST /api/cases @{caseNumber="OTHER-$tag";type='civil';clientId=$second.id;status='active';court='Other Court'} $admin 201
  $caseIds=@([long]$case.id,[long]$otherCase.id)
- $null=Send-Api POST "/api/office-portal/clients/$($second.id)/account" @{email="portal-other-$tag@example.com";password='Temporary-Test-123'} $lawyer 404
- $account=Send-Api POST "/api/office-portal/clients/$($first.id)/account" @{email="portal-client-$tag@example.com";password='Temporary-Test-123'} $lawyer
+ $null=Send-Api POST "/api/office-portal/clients/$($second.id)/account" @{nationalId=$otherIdentity;email="portal-other-$tag@example.com";password='Temporary-Test-123'} $lawyer 404
+ $account=Send-Api POST "/api/office-portal/clients/$($first.id)/account" @{nationalId=$clientIdentity;email="portal-client-$tag@example.com";password='Temporary-Test-123'} $lawyer
  $userIds+=[long]$account.id
- $otherAccount=Send-Api POST "/api/office-portal/clients/$($second.id)/account" @{email="portal-other-$tag@example.com";password='Temporary-Test-123'} $admin
+ $otherAccount=Send-Api POST "/api/office-portal/clients/$($second.id)/account" @{nationalId=$otherIdentity;email="portal-other-$tag@example.com";password='Temporary-Test-123'} $admin
  $userIds+=[long]$otherAccount.id
- $null=Send-Api POST "/api/office-portal/clients/$($first.id)/account" @{email="duplicate-$tag@example.com";password='Temporary-Test-123'} $admin 400
- $login=Send-Api POST /api/auth/login @{email="portal-client-$tag@example.com";password='Temporary-Test-123'} $client
+ $null=Send-Api POST "/api/office-portal/clients/$($first.id)/account" @{nationalId=$clientIdentity;email="duplicate-$tag@example.com";password='Temporary-Test-123'} $admin 400
+ $login=Send-Api POST /api/auth/login @{nationalId=$clientIdentity;password='Temporary-Test-123'} $client
  Assert-True ($login.user.role -eq 'client' -and $login.user.mustChangePassword) 'Client onboarding must require a password change'
  $null=Send-Api GET /api/client-portal/overview $null $client 403
  $null=Send-Api POST /api/auth/change-password @{currentPassword='Temporary-Test-123';newPassword='Private-Client-123'} $client
- $null=Send-Api POST /api/auth/login @{email="portal-other-$tag@example.com";password='Temporary-Test-123'} $other
+ $null=Send-Api POST /api/auth/login @{nationalId=$otherIdentity;password='Temporary-Test-123'} $other
  $null=Send-Api POST /api/auth/change-password @{currentPassword='Temporary-Test-123';newPassword='Private-Other-123'} $other
  foreach($path in @('/api/cases','/api/clients','/api/users','/api/payments','/api/documents','/api/dashboard/summary','/api/office-portal/receipts')){
   $null=Send-Api GET $path $null $client 403
@@ -102,11 +104,8 @@ try {
  $null=Send-Api POST "/api/consultation-requests/$($newConsult.id)/reply" @{response='Synthetic consultation answer'} $lawyer
  $null=Send-Api POST "/api/client-portal/consultations/$($newConsult.id)/reply" @{response='Client follow-up'} $other 404
  $null=Send-Api POST "/api/client-portal/consultations/$($newConsult.id)/reply" @{response='Client follow-up'} $client
- $public=Send-Api POST /api/public/consultations @{name='Synthetic visitor';email="visitor-$tag@example.com";phone='000';summary='Synthetic consultation to explicitly claim'} $null 201
+ $public=Send-Api POST /api/public/consultations @{name='Synthetic visitor';email="portal-client-$tag@example.com";phone='01000000000';summary='Synthetic consultation to automatically link'} $null 201
  $requestIds+=[long]$public.id
- $null=Send-Api POST /api/client-portal/consultations/link @{id=$public.id;token=[guid]::NewGuid().ToString()} $client 404
- $null=Send-Api POST /api/client-portal/consultations/link @{id=$public.id;token=$public.token} $client
- $null=Send-Api POST /api/client-portal/consultations/link @{id=$public.id;token=$public.token} $other 404
  $preferences=Send-Api GET /api/notifications/preferences $null $client
  Assert-True ($preferences.site_enabled) 'Site notifications default on'
  $notices=Send-Api GET /api/notifications $null $client
@@ -128,7 +127,7 @@ try {
  Assert-True ($otherPrefs.site_enabled) 'Preferences must be scoped to the current user'
  $null=Send-Api PUT /api/notifications/preferences @{siteEnabled=$true;emailEnabled=$true;browserEnabled=$false} $client
  $overview=Send-Api GET /api/client-portal/overview $null $client
- Assert-True ($overview.requests.Count -eq 2) 'Owned and explicitly claimed consultations should appear'
+ Assert-True ($overview.requests.Count -eq 2) 'Owned and automatically linked consultations should appear'
  $null=Send-Api POST "/api/client-portal/cases/$($case.id)/review" @{stars=5;comment='Too early'} $client 400
  $null=Send-Api POST "/api/office-portal/cases/$($case.id)/updates" @{title='Case closed';body='Synthetic case closure';status='closed'} $lawyer
  $null=Send-Api POST "/api/client-portal/cases/$($case.id)/review" @{stars=6;comment='Invalid score'} $client 400

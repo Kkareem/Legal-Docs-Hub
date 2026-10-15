@@ -1,3 +1,6 @@
+import {registerLocaleData} from '@angular/common';
+import localeArSa from '@angular/common/locales/ar-SA';
+registerLocaleData(localeArSa,'ar-SA');
 import {TestBed} from '@angular/core/testing';
 import {of} from 'rxjs';
 import {ActivatedRoute} from '@angular/router';
@@ -29,8 +32,29 @@ describe('Case workspace participants and history',()=>{
  });
  it('shows the actor and exact changes and accepts an optional opponent',()=>{
   const f=TestBed.createComponent(CaseWorkspaceComponent);f.detectChanges();
+  f.componentInstance.selectTab('audit');f.detectChanges();
   expect(f.nativeElement.textContent).toContain('المحامي الثاني — تعديل خصم');
   expect(f.nativeElement.textContent).toContain('اسم قديم');expect(f.nativeElement.textContent).toContain('اسم جديد');
   f.componentInstance.saveOpponent();expect(api.saveOpponent).toHaveBeenCalledWith(10,{});
  });
+ it('shows an overview first and opens only the chosen editor',()=>{
+  const f=TestBed.createComponent(CaseWorkspaceComponent);f.detectChanges();
+  expect(f.nativeElement.querySelector('form')).toBeNull();
+  expect(f.nativeElement.textContent).toContain('التسلسل الزمني للقضية');
+  f.componentInstance.selectTab('payments');f.detectChanges();
+  expect(f.nativeElement.textContent).not.toContain('التسلسل الزمني للقضية');
+  f.componentInstance.openEditor('payment');f.detectChanges();
+  expect(f.nativeElement.querySelectorAll('form').length).toBe(1);
+  expect(f.nativeElement.querySelector('select[name="payer"]')).not.toBeNull();
+  f.componentInstance.selectTab('files');f.detectChanges();
+  expect(f.nativeElement.querySelector('form')).toBeNull();
+  expect(f.nativeElement.textContent).toContain('الملفات المشتركة مع الموكلين');
+ });
+ it('discards unsaved member choices when cancelling the editor',()=>{
+  const f=TestBed.createComponent(CaseWorkspaceComponent);f.detectChanges();
+  f.componentInstance.openEditor('members');f.componentInstance.toggle('clientIds',2);
+  expect(f.componentInstance.clientIds).toEqual([1]);f.componentInstance.closeEditor();
+  expect(f.componentInstance.clientIds).toEqual([1,2]);expect(api.members).not.toHaveBeenCalled();
+ });
+
 });

@@ -1,0 +1,65 @@
+name: legaldesk-prod
+services:
+  postgres:
+    image: postgres:17
+    environment:
+      POSTGRES_DB: legaldesk
+      POSTGRES_USER: legaldesk
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in the environment file}
+    volumes:
+      - legaldesk-postgres:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U legaldesk -d legaldesk"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  backend:
+    build:
+      context: .
+      args:
+        APP_PROFILE: prod
+    environment:
+      SPRING_PROFILES_ACTIVE: prod
+      BOOTSTRAP_OWNER_NATIONAL_ID: ${BOOTSTRAP_OWNER_NATIONAL_ID:-}
+      BOOTSTRAP_OWNER_EMAIL: ${BOOTSTRAP_OWNER_EMAIL:-}
+      BOOTSTRAP_OWNER_PHONE: ${BOOTSTRAP_OWNER_PHONE:-}
+      BOOTSTRAP_OWNER_PASSWORD: ${BOOTSTRAP_OWNER_PASSWORD:-}
+      DATABASE_URL: jdbc:postgresql://postgres:5432/legaldesk
+      DATABASE_USERNAME: legaldesk
+      DATABASE_PASSWORD: ${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in the environment file}
+      APP_PUBLIC_URL: ${APP_PUBLIC_URL:?Set APP_PUBLIC_URL to the office HTTPS URL}
+      APP_ATTACHMENTS_DIRECTORY: /app/.data/attachments
+      APP_SETTINGS_KEY_FILE: /app/.data/settings.key
+      SESSION_COOKIE_SECURE: "true"
+    volumes:
+      - legaldesk-files:/app/.data
+    depends_on:
+      postgres:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "wget", "-q", "-O", "/dev/null", "http://127.0.0.1:8080/api/healthz"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 40s
+    restart: unless-stopped
+
+  frontend:
+    build:
+      context: ../legal-desk-angular
+    ports:
+      - "127.0.0.1:${FRONTEND_PORT:-4080}:80"
+    depends_on:
+      backend:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "wget", "-q", "-O", "/dev/null", "http://127.0.0.1/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+
+volumes:
+  legaldesk-postgres:
+  legaldesk-files:

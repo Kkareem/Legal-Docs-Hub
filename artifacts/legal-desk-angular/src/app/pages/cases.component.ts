@@ -1,3 +1,4 @@
+import {MemberPickerComponent} from '../shared/member-picker.component';
 import { CommonModule } from '@angular/common';
 import { Component, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
@@ -8,7 +9,7 @@ import { CaseItem, Client, CreateCaseBody, User } from '../core/models';
 @Component({
   selector: 'app-cases',
   standalone: true,
-  imports: [CommonModule, FormsModule, RouterLink],
+  imports: [MemberPickerComponent, CommonModule, FormsModule, RouterLink],
   templateUrl: './cases.component.html',
 })
 export class CasesComponent {

@@ -1,0 +1,9 @@
+server:
+  forward-headers-strategy: framework
+logging:
+  level:
+    org.hibernate.SQL: WARN
+app:
+  public-url: ${APP_PUBLIC_URL:http://187.7.74.246:4021}
+  attachments-directory: ${APP_ATTACHMENTS_DIRECTORY:.data/stg/attachments}
+  settings-key-file: ${APP_SETTINGS_KEY_FILE:.data/stg/settings.key}

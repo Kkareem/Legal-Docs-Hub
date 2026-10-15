@@ -3,9 +3,12 @@ import { Router } from '@angular/router';
 import { catchError, map, Observable, of, tap, from, switchMap,firstValueFrom } from 'rxjs';
 import { ApiService } from './api.service';
 import { LoginBody, User } from './models';
+import {SessionLifecycleService} from './session-lifecycle.service';
 
 @Injectable({ providedIn: 'root' })
 export class AuthService {
+  private readonly lifecycle=inject(SessionLifecycleService);
+  constructor(){this.lifecycle.expired.subscribe(()=>{this.user.set(null);this.ready.set(true);this.loading.set(false);void this.router.navigateByUrl('/login');});}
   private readonly api = inject(ApiService);
   private readonly router = inject(Router);
 
@@ -24,6 +27,7 @@ export class AuthService {
       }),
       map((user) => user ?? null),
       catchError(() => {
+        this.lifecycle.clear();
         this.user.set(null);
         this.ready.set(true);
         this.loading.set(false);
@@ -53,14 +57,17 @@ export class AuthService {
   private async clearBrowserSubscription(){
     try{if('serviceWorker' in navigator){const registration=await navigator.serviceWorker.getRegistration('/notifications-sw.js');const subscription=await registration?.pushManager.getSubscription();if(subscription){try{await firstValueFrom(this.api.removePushSubscription(subscription.endpoint));}finally{await subscription.unsubscribe();}}}}catch{}
   }
+  clearLocalSession(){this.lifecycle.clear();this.user.set(null);this.ready.set(true);this.loading.set(false);}
   logout(): Observable<void> {
     return from(this.clearBrowserSubscription()).pipe(switchMap(()=>this.api.logout()),
       tap(() => {
+        this.lifecycle.clear();
         this.user.set(null);
         this.ready.set(true);
         void this.router.navigateByUrl('/login');
       }),
       catchError(() => {
+        this.lifecycle.clear();
         this.user.set(null);
         this.ready.set(true);
         void this.router.navigateByUrl('/login');

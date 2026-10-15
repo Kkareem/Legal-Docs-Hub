@@ -71,6 +71,7 @@ pnpm-debug.log*
 !.vscode/settings.json
 !.vscode/tasks.json
 !.vscode/launch.json
+!.vscode/launch.json
 !.vscode/extensions.json
 
 # OS files
@@ -84,3 +85,6 @@ Desktop.ini
 /libpeerconnection.log
 /typings
 .cursor/
+
+# Local attachment files and credentials
+**/.data/

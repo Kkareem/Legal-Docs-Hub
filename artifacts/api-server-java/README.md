@@ -84,8 +84,8 @@ Existing H2 data is not imported automatically. The old `.data` files are left u
 ## Lawyer onboarding and visitor consultations
 
 - Angular `/lawyers`: admins and owners create lawyer accounts with a temporary password (at least 10 characters). New accounts must change it at `/change-password`; the backend blocks protected APIs until this is done.
-- Angular `/consultation`: visitors submit a consultation without signing in and receive a request number and secret tracking token. Both are required to view the status and reply. No email or SMS is sent.
-- Angular `/consultation-requests`: admins and owners view all visitor requests, reply directly, or assign an active lawyer. Lawyers see and reply only to their own assigned requests. Messages are preserved in order. Once staff replies, staff must wait for the visitor's follow-up; the visitor replies from the secret tracking page, which reopens the staff reply. The backend enforces these turns, including concurrent submissions. Existing replies are preserved by migration V3. Visitor requests are stored separately from existing client consultations.
+- Angular `/consultation`: visitors submit a consultation with an email address or phone number. Tracking requires an OTP delivered to that contact; consultation numbers and legacy secret tokens are no longer used for lookup.
+- Angular `/consultation-requests`: admins and owners view all visitor requests, reply directly, or assign an active lawyer. Lawyers see and reply only to their own assigned requests. Messages are preserved in order. Once staff replies, staff must wait for the visitor's follow-up; the visitor replies after contact verification, which reopens the staff reply. The backend enforces these turns, including concurrent submissions. Existing replies are preserved by migration V3. Visitor requests are stored separately from existing client consultations.
 - Dashboard `totalVisitors` counts distinct browser IDs saved in local storage when the public consultation page opens. Refreshing does not increment the counter; another browser or clearing storage counts as another visitor. Pending consultations include visitor requests.
 
 Consultations support multiple assigned lawyers. Admins select them with checkboxes and always retain access. Only assigned lawyers can see or reply to the request; removing an assignee revokes both permissions. Migration V4 carries existing assignments forward. Each staff message stores the author's name when sent, so later reassignment does not change the names on earlier replies. The conversation still alternates between the office and visitor, with one shared office turn across all assigned lawyers.
@@ -100,12 +100,12 @@ The script uses local demo admin credentials by default, verifies onboarding, au
 
 ## Client portal
 
-- Staff open the Clients page and choose **Create client account**, providing an email and a temporary password of at least 10 characters. Admins/owners may provision any client; a lawyer may provision a client of a case assigned to them. Existing demo links from client records to staff identities are removed by V5 so that staff accounts are not treated as client logins.
+- Staff open the Clients page and choose **Create client account**, providing a 14-digit identity, optional email/phone and a temporary password of at least 10 characters. Admins/owners may provision any client; a lawyer may provision a client of a case assigned to them. Existing demo links from client records to staff identities are removed by V5 so that staff accounts are not treated as client logins.
 - Clients sign in on the normal login page, must change their temporary password, and are redirected to Angular `/my-account`. The server blocks client accounts from office APIs and scopes portal queries, uploads, downloads, consultations, payments, and reviews to their linked client record.
 - From Cases, staff open **Client follow-up, hearings and fees** to publish progress updates, schedule hearings, share files, and request case fees. These actions are restricted to admins/owners and the case's lead lawyer.
 - Client and staff case attachments support multiple files of any type: at most 10 per upload, 20 MB each and 50 MB total. All attachments and receipts use `documents`. V7 migrates stored files and receipt references and preserves old download links. Bytes are stored in PostgreSQL, persist with the database volume, and are served as authenticated downloads. Existing document metadata remains visible; a legacy document URL is not automatically imported as stored file content.
 - Admins set the office's real bank details under **Bank transfers and receipts**. Clients transfer externally and upload a receipt and transfer reference. A submitted receipt sets the payment to `under_review`, not `paid`. Only admins/owners can approve or reject it; rejection allows a new submission. General payment requests can be created on this page as well.
-- Clients can create consultations for their own cases, reply when it is their turn, and explicitly link an earlier visitor consultation using its request number and secret token. Records are never claimed by matching email alone.
+- Clients can create consultations for their own cases, reply when it is their turn, and see earlier visitor consultations automatically linked by their recorded email or phone when staff creates their account. A shared contact never merges two existing clients.
 - A client can submit one rating from 1 to 5 for the lead lawyer after their case is closed. The rating appears in the case workspace.
 
 With the local Compose database and backend running, `./scripts/smoke-client-portal.ps1` verifies onboarding, two-client data isolation, multi-file downloads, case progress and hearings, consultation ownership, receipt rejection/approval, and closed-case ratings. It removes only its synthetic fixtures.
@@ -155,3 +155,109 @@ The office case workspace manages participants and optional opponents (name, pho
 Database triggers record case changes from activation onward, including case membership, opponents, progress, hearings, tasks, documents, payments/receipts, consultations, powers of attorney and reviews. Activity records the authenticated actor and field values before/after changes; binary content and secret tracking tokens are excluded. V10 includes document metadata and records resource transfers in both case histories. Transaction-local actor identity resets when connections return to the pool. Historical actors are not fabricated; deleted case history is retained in the database. No activity mutation API is exposed.
 
 Run `pwsh -NoProfile -File scripts/smoke-case-participants.ps1` with the local app and Docker available to verify membership access, shared files/progress, private payments, opponents, actor audit, ratings and revocation. The script creates and removes synthetic fixtures only.
+
+
+### Attachments stored on the server disk
+
+Files and bank receipts are now stored under `APP_ATTACHMENTS_DIRECTORY` (default `.data/attachments`, relative to the backend working directory). Use an absolute persistent directory in production. PostgreSQL stores only the protected download URL, internal file key and metadata; a database constraint prevents storing new binary content. Downloads retain existing user/case/payment authorization and never expose the storage directory as a public static folder.
+
+At startup, existing database attachments are copied one at a time, verified byte-for-byte and then cleared from the database within a transaction. A failed copy leaves the original bytes intact and fails startup. Failed uploads clean their new disk files on transaction rollback. Deleted document records enqueue disk cleanup, retried every 30 seconds. File names contain the sanitized original name, a unique numeric epoch-millisecond timestamp and the original sanitized extension, in Cases/case_<id>_<caseNumber>/receipts or others.
+
+Back up and restore PostgreSQL **and** the attachments directory together. Moving or deploying the server requires retaining this directory; it is not the visitor's or client's device. Existing download URLs remain unchanged. The legacy nullable `content` column remains for upgrade compatibility, with a validated `content IS NULL` constraint after migration.
+
+Attachment layout: `cases/case_<id>_<case-number>/<name>_<timestamp>_<uuid>.<ext>` for case files; `receipts/case_<id>_<case-number>/payment_<id>/...` for case payment receipts, or `receipts/general/payment_<id>/...` for general payments. Including the internal case ID avoids collisions between duplicate/sanitized case numbers. Flat legacy files are copied, verified and remapped at startup; old copies enter the cleanup queue only after the database mapping commits. Existing public download URLs and original download names remain unchanged. Existing stored folders remain valid if a case number is later renamed.
+
+Current layout: `Cases/case_<id>_<case-number>/receipts/<filename>_<epochMillis>.<extension>` for receipts, and `Cases/case_<id>_<case-number>/others/...` for case attachments. General payments without a case use `Cases/general/receipts`. A monotonic epoch-millisecond long and exclusive file creation/retry prevent collisions without UUID suffixes. Previous layouts are copied, verified and remapped at startup, then queued for cleanup after commit.
+
+
+## Identity login, unified settings and contact verification
+
+Office Gmail, banking, browser keys and other general configuration use the `settings` table (`name`, JSONB `value`, `updated_at`), preserving encrypted credentials. V14 moves personal notification preferences into `notification_preferences`, keyed by `user_id`, preserving existing channel choices and removing `notifications.user.*` rows from general settings. The old settings tables are removed after copying their data. Settings APIs return only safe fields, never passwords, SMS tokens or signing keys. Currency, bank details, Gmail, SMS, JWT duration and OTP policy are managed from Angular `/settings` by admins/owners; each user manages their own notification channels.
+
+Login now takes `nationalId` (exactly 14 ASCII digits) and `password`. New staff accounts require email or phone; creating a client account requires identity and a temporary password, with either contact optional. Email remains optional and unique if supplied. Existing non-demo users without a valid identity are left unset; an admin must record the real identity in Settings → account identities. Only the development seed logins have example identifiers: `00000000000001` (office owner), `00000000000002` (seed lawyer). Existing passwords are retained.
+
+Authentication uses signed HS256 JWTs (issuer/audience/expiry validation) with a default fixed lifetime of 60 minutes. The web application uses an HttpOnly SameSite=Strict cookie; API clients may use the returned token as Bearer. No token is stored in browser local/session storage. There is no HTTP session or automatic refresh. Logout revokes the token, and changing passwords or admin account changes invalidate prior tokens. New tokens reflect the configured lifetime; active tokens retain their original expiry. Configure `SESSION_COOKIE_SECURE=true` when serving through HTTPS. Browser mutations are checked against the installation's configured origin. Signing keys are encrypted in `settings`, using the existing persistent settings master key file.
+
+Public consultation submission requires email or phone. `/api/public/consultations/verification/request` accepts `contact`; `/verification/verify` accepts `challengeId` and the six-digit `code`. After verification, an in-memory visitor `accessToken` scopes `/track` and `/reply` to only that contact's requests. Default code lifetime is 5 minutes, 5 guesses, a 60-second resend wait, and 15-minute visitor access. OTPs are HMAC hashed, single use, rate limited by contact and server-observed IP, and never logged or returned by APIs. Email uses office Gmail. Phone OTP requires configured Twilio Account SID, Auth Token and sender in Settings; credentials are encrypted and the connector remains disabled until configured. SMS provider charges are separate. Phone delivery has not been tested against a real provider account.
+
+When staff creates a client account, unlinked visitor requests matching its normalized email or phone are linked to that client. Existing ownership is retained and shared contacts are not used to merge accounts. Later visitor requests also attach to an unambiguous existing client. Updating a linked client's contacts through the office account editor triggers the same linking. The manual request-number/token claim form and API have been removed.
+
+Run `scripts/smoke-onboarding.ps1` (optional `-MavenRepository` path) with local PostgreSQL running for JWT/OTP/identity integration checks. These create and remove a unique temporary schema, mock mail delivery and never touch public office records. Ordinary `mvn test` skips these database checks unless `LEGALDESK_INTEGRATION_TESTS=true`. The other portal/participants smoke scripts now use identity login and should run only against a designated test instance. Angular tests run via `node node_modules/@angular/cli/bin/ng.js test --watch=false` from the Angular artifact.
+
+
+## Run Angular and Java on Docker Desktop
+
+From the repository root:
+
+```powershell
+docker compose -f artifacts/api-server-java/compose.yml up -d --build --wait
+docker compose -f artifacts/api-server-java/compose.yml ps
+```
+
+Open http://localhost:4020. The Java API is available at http://localhost:8080/api/healthz; Angular also proxies `/api` through Nginx on its own origin. Stop the local Angular/Java development servers before using these default ports. To run alongside them, set `FRONTEND_PORT=4021` and `BACKEND_PORT=8081` in `.env` beside the compose file (see `.env.docker.example`).
+
+The stack builds Angular in Node and Java in Maven, then runs Nginx, Java 21 and PostgreSQL 17. Health checks make the backend wait for PostgreSQL and the frontend wait for the backend. The existing `legaldesk-postgres` volume is reused. The backend mounts `legaldesk-app/.data` so existing attachments and the encryption key continue to work; changing containers does not remove files or database data. Keep this directory and PostgreSQL together when moving the office installation. On Linux, the configured data directory must be writable by the container's `legaldesk` user.
+
+```powershell
+docker compose -f artifacts/api-server-java/compose.yml stop
+docker compose -f artifacts/api-server-java/compose.yml start --wait
+docker compose -f artifacts/api-server-java/compose.yml logs --tail 50 backend
+```
+
+All accounts (office staff, lawyers and clients) sign in with a 14-digit `nationalId`. Email is contact information only. Legacy accounts without an identity must have their real identity recorded by an administrator in Settings before signing in.
+
+Telephone fields have separate country-code and national-number inputs. They submit a normalized international telephone string to the API, preserving the existing contact matching and consultation linking contract. Egypt uses `+20` and Saudi Arabia uses `+966`; the domestic leading zero is omitted when saving these numbers (`+20` / `01018681448` → `+201018681448`, `+966` / `0551400324` → `+966551400324`). Other country codes remain editable. Phone consultation tracking uses the same input and continues to require SMS verification configuration.
+
+
+## dev / stg / prod profiles and debugging
+
+The Maven profiles choose the Spring default packaged in the executable jar; an explicit `SPRING_PROFILES_ACTIVE` overrides that default at runtime. `dev` is the default Maven profile. Configuration lives in `application-dev.yml`, `application-stg.yml` and `application-prod.yml`. The legacy `local` Spring profile remains compatible with existing developer commands.
+
+| Profile | Configuration | Seed data | API documentation |
+| --- | --- | --- | --- |
+| dev | Local PostgreSQL defaults; optional `.env.dev` | Demo data only in an empty database | Enabled |
+| stg | Explicit database credentials; isolated staging data | Configured first owner only | Enabled |
+| prod | Explicit credentials and public HTTPS URL; secure cookies | Configured first owner only | Disabled |
+
+Build from `artifacts/api-server-java`:
+
+```powershell
+mvn -Pdev -pl legaldesk-app -am package
+mvn -Pstg -pl legaldesk-app -am package
+mvn -Pprod -pl legaldesk-app -am package
+```
+
+Choose one profile at a time. All three configuration files are included in the jar; no office passwords are built into an image or jar.
+
+For local run/debug, copy the relevant `.env.dev.example`, `.env.stg.example` or `.env.prod.example` to its name without `.example`, and configure it. The script loads that file, builds/installs the Maven reactor and runs the selected profile:
+
+```powershell
+./scripts/run-backend.ps1 -Profile dev
+./scripts/run-backend.ps1 -Profile stg -Debug
+./scripts/run-backend.ps1 -Profile prod -Debug
+```
+
+Optional `-Port 8084` changes the application port; `-DebugPort 5015` changes the debugger port; `-SkipBuild` skips reactor installation. Debug connections bind to loopback: dev 5005, stg 5006, prod 5007. Debugging a locally launched prod profile requires explicitly configured production database access in `.env.prod`; the production Docker database is not published on the host.
+
+VS Code with the Java debugger: select **LegalDesk - dev**, **LegalDesk - stg** or **LegalDesk - prod** in Run and Debug, then press F5. Each launch first runs its matching Maven build task. **Attach Maven - dev/stg/prod** attaches to a backend started with the script's `-Debug` option. In IntelliJ, choose the matching Maven profile and set the Spring run configuration's active profile to the same value.
+
+## Docker for staging and production
+
+Standalone stacks use separate Compose project names, PostgreSQL volumes, attachment volumes and encryption keys. They do not reuse or copy the current development office data. The original `compose.yml` remains a compatibility stack for the existing local installation and runs the stg application profile with its existing data directory.
+
+From `artifacts/api-server-java`:
+
+```powershell
+# Edit credentials and first-owner fields before the first start.
+Copy-Item .env.stg.example .env.stg
+Copy-Item .env.prod.example .env.prod
+
+docker compose --env-file .env.stg -f compose.stg.yml up -d --build --wait
+docker compose --env-file .env.prod -f compose.prod.yml up -d --build --wait
+```
+
+Staging opens at http://localhost:4021, its backend is on loopback port 8081, and its database is on loopback port 5433. Production Nginx binds to loopback port 4080 and must sit behind the office's HTTPS reverse proxy. Set `APP_PUBLIC_URL` to that HTTPS domain and have the proxy forward the original `Host` and `X-Forwarded-Proto: https`. The backend and PostgreSQL are internal-only in prod; authentication cookies are Secure. The compose files use the correct Maven build profile and explicitly set the matching Spring runtime profile.
+
+For a new empty staging/production database, set `BOOTSTRAP_OWNER_NATIONAL_ID` (14 digits), `BOOTSTRAP_OWNER_PASSWORD` (10-128 characters) and either `BOOTSTRAP_OWNER_EMAIL` or `BOOTSTRAP_OWNER_PHONE`. The account is created once as owner and must change its temporary password on first login. Existing accounts are never changed by bootstrap values. Empty databases without valid bootstrap credentials fail startup with an actionable message. Remove bootstrap secrets from the environment after provisioning the owner.
+
+Keep each environment's PostgreSQL and `legaldesk-files` volumes together when backing up or moving it. Nginx permits multipart uploads of the API's configured size and handles Angular deep links. No debugger port is enabled in either Docker stack.

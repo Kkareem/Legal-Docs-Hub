@@ -13,11 +13,12 @@
 <section class="card panel grid" style="margin-top:24px">
 <h2>القضية {{detail.case.case_number}}</h2><p>المرحلة الحالية: <strong>{{caseStatuses[detail.case.status] || detail.case.status}}</strong></p><p>{{detail.case.description}}</p>
 <h3>سجل تقدم القضية</h3>
-<ol class="list"><li class="card panel">فتح القضية — {{detail.case.created_at | date:'mediumDate'}}</li>
-@for(update of detail.updates;track update.id){<li class="card panel"><strong>{{update.title}}</strong><p style="white-space:pre-wrap">{{update.body}}</p><p class="meta">{{caseStatuses[update.status] || update.status}} · {{update.created_at | date:'medium'}} · {{update.author_name}}</p></li>}
-</ol>
+<app-case-timeline [details]="detail" />
+<h3>الطلبات المطلوبة منك</h3>
+@for(q of detail.clientRequests;track q.id){<article class="card panel grid"><h4>{{q.title}} — جلسة رقم {{q.hearing_number}}</h4><p style="white-space:pre-wrap">{{q.details}}</p>@if(q.target_hearing_number){<p>للتقديم في الجلسة رقم {{q.target_hearing_number}} بتاريخ {{q.target_hearing_datetime | date:'medium'}}</p>}@if(q.due_at){<p>موعد التسليم: {{q.due_at | date:'medium'}}</p>}
+@if(q.status==='pending'){<label>تفاصيل تنفيذ الطلب<textarea class="textarea" [(ngModel)]="completionNotes[q.id]" maxlength="10000"></textarea></label><label>المرفقات {{q.kind==='document'?'(مطلوبة)':'(اختيارية)'}}<input class="input" #requestFiles type="file" multiple></label><p class="meta">حتى 10 ملفات، 20 ميجابايت للملف و50 للمجموعة.</p><button class="btn btn-primary" [disabled]="busy()||!completionNotes[q.id]?.trim()" (click)="completeRequest(q.id,requestFiles)">تلبية الطلب</button>}@else{<strong>تم تلبية الطلب — {{q.completed_at | date:'medium'}}</strong><p style="white-space:pre-wrap">{{q.completion_notes}}</p>@for(f of q.files;track f.id){<a [href]="api.fileUrl(f.id)" download>{{f.file_name}}</a>}}</article>}@empty{<p class="meta">لا توجد طلبات مطلوبة منك.</p>}
 <h3>جلسات القضية</h3>
-@for(h of detail.hearings;track h.id){<div class="list-item"><strong>{{h.court}}</strong><span>{{h.datetime | date:'medium'}} · {{hearingStatuses[h.status] || h.status}}</span></div>}@empty{<p class="meta">لا توجد جلسات مسجلة.</p>}
+@for(h of detail.hearings;track h.id){<div class="list-item"><strong>جلسة رقم {{h.hearing_number}} — {{h.court}}</strong><span>{{h.datetime | date:'medium'}} · {{hearingStatuses[h.status] || h.status}}</span></div>}@empty{<p class="meta">لا توجد جلسات مسجلة.</p>}
 <h3>المرفقات المشتركة مع المكتب</h3>
 @for(file of detail.files;track file.id){<a class="btn btn-secondary" [href]="api.fileUrl(file.id)" download>{{file.file_name}} — تنزيل</a>}@empty{<p class="meta">لا توجد مرفقات مرفوعة.</p>}
 @for(doc of detail.documents;track doc.id){<p class="meta">مستند مسجل بالمكتب: {{doc.file_name}}</p>}
@@ -47,7 +48,7 @@
 }
 @if(tab()==='consultations'){
 <form class="card panel grid" #consult="ngForm" (ngSubmit)="newConsultation()"><h2>استشارة جديدة للمكتب</h2><label>القضية (اختياري)<select class="select" name="caseId" [(ngModel)]="consultCaseId"><option [ngValue]="null">استشارة عامة</option>@for(c of data.cases;track c.id){<option [ngValue]="c.id">{{c.case_number}}</option>}</select></label><label>تفاصيل الاستشارة<textarea class="textarea" name="summary" [(ngModel)]="summary" required minlength="10" maxlength="10000"></textarea></label><button class="btn btn-primary" [disabled]="consult.invalid || busy()">إرسال الاستشارة</button></form>
-<form class="card panel grid" style="margin-top:20px" #linkForm="ngForm" (ngSubmit)="link()"><h3>ربط استشارة سابقة أرسلتها كزائر</h3><label>رقم الطلب<input class="input" type="number" name="linkId" [(ngModel)]="linkId" required min="1"></label><label>الرمز السري<input class="input" name="linkToken" [(ngModel)]="linkToken" required></label><button class="btn btn-secondary" [disabled]="linkForm.invalid || busy()">ربط الاستشارة بحسابي</button></form>
+<p class="meta">تُربط استشارات الزائر تلقائيًا بالبريد أو الهاتف المسجل في حسابك. تواصل مع المكتب لتحديث وسيلة التواصل إذا كانت استشارة سابقة غير ظاهرة.</p>
 @for(q of data.requests;track q.id){<article class="card panel grid" style="margin-top:20px"><h3>استشارة #{{q.id}}</h3><p style="white-space:pre-wrap">{{q.summary}}</p>@for(m of q.messages;track m.id){<div class="card panel"><strong>{{m.sender_type==='staff'?(m.sender_name || 'المكتب'):'أنت'}}</strong><p style="white-space:pre-wrap">{{m.body}}</p></div>}
 @if(q.canReply){<label>ردك<textarea class="textarea" [(ngModel)]="replies[q.id]" maxlength="20000"></textarea></label><button class="btn btn-primary" [disabled]="busy()||!replies[q.id]?.trim()" (click)="reply(q.id)">إرسال الرد</button>}@else{<p class="meta">بانتظار رد المكتب</p>}
 </article>}

@@ -1,0 +1,68 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "type": "java",
+      "name": "LegalDesk - dev",
+      "request": "launch",
+      "mainClass": "com.legaldesk.LegalDeskApplication",
+      "projectName": "legaldesk-app",
+      "cwd": "${workspaceFolder}/artifacts/api-server-java/legaldesk-app",
+      "envFile": "${workspaceFolder}/artifacts/api-server-java/.env.dev",
+      "env": {
+        "SPRING_PROFILES_ACTIVE": "dev"
+      },
+      "preLaunchTask": "Maven build dev",
+      "console": "integratedTerminal"
+    },
+    {
+      "type": "java",
+      "name": "Attach Maven - dev",
+      "request": "attach",
+      "hostName": "127.0.0.1",
+      "port": 5005
+    },
+    {
+      "type": "java",
+      "name": "LegalDesk - stg",
+      "request": "launch",
+      "mainClass": "com.legaldesk.LegalDeskApplication",
+      "projectName": "legaldesk-app",
+      "cwd": "${workspaceFolder}/artifacts/api-server-java/legaldesk-app",
+      "envFile": "${workspaceFolder}/artifacts/api-server-java/.env.stg",
+      "env": {
+        "SPRING_PROFILES_ACTIVE": "stg"
+      },
+      "preLaunchTask": "Maven build stg",
+      "console": "integratedTerminal"
+    },
+    {
+      "type": "java",
+      "name": "Attach Maven - stg",
+      "request": "attach",
+      "hostName": "127.0.0.1",
+      "port": 5006
+    },
+    {
+      "type": "java",
+      "name": "LegalDesk - prod",
+      "request": "launch",
+      "mainClass": "com.legaldesk.LegalDeskApplication",
+      "projectName": "legaldesk-app",
+      "cwd": "${workspaceFolder}/artifacts/api-server-java/legaldesk-app",
+      "envFile": "${workspaceFolder}/artifacts/api-server-java/.env.prod",
+      "env": {
+        "SPRING_PROFILES_ACTIVE": "prod"
+      },
+      "preLaunchTask": "Maven build prod",
+      "console": "integratedTerminal"
+    },
+    {
+      "type": "java",
+      "name": "Attach Maven - prod",
+      "request": "attach",
+      "hostName": "127.0.0.1",
+      "port": 5007
+    }
+  ]
+}

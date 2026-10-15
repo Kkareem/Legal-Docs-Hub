@@ -17,8 +17,17 @@ public class UserEntity extends AuditedEntity {
     @Column(nullable = false)
     private String name;
 
-    @Column(nullable = false, unique = true)
+    @Column(unique = true)
     private String email;
+
+    @Column(name="national_id",unique=true,length=14)
+    private String nationalId;
+    @Column(name="auth_version",nullable=false)
+    private int authVersion;
+    public String getNationalId(){return nationalId;}
+    public void setNationalId(String value){nationalId=value;}
+    public int getAuthVersion(){return authVersion;}
+    public void setAuthVersion(int value){authVersion=value;}
 
     @Column(name = "password_hash", nullable = false)
     private String passwordHash;

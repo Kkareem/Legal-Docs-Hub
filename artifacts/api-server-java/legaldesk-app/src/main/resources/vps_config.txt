@@ -1,0 +1,8 @@
+=====DB======legaldesk====
+user: kk_postgres
+pass: kk_postgres
+===========server===============
+ip: 187.7.74.246
+user: root
+pass: sH?o,ECN24&+,.nI
+===============================

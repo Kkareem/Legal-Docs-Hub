@@ -22,20 +22,23 @@ import {
 export class ApiService {
   removePushSubscription(endpoint:string){return this.http.delete<void>('/api/notifications/subscriptions',{...this.options(),body:{endpoint}});}
 
-  createLawyer(body: {name:string;email:string;phone:string;password:string;role:string}) {
+  createLawyer(body: {name:string;nationalId:string;email:string;phone:string;password:string;role:string}) {
     return this.http.post<User>('/api/users',body,this.options());
   }
+  updateUser(id:number,body:{nationalId?:string;email?:string;phone?:string}){return this.http.patch<User>('/api/users/'+id,body,this.options());}
   changePassword(body: {currentPassword:string;newPassword:string}) {
     return this.http.post<User>('/api/auth/change-password',body,this.options());
   }
   recordVisit(visitorId:string) { return this.http.post<void>('/api/public/visits',{visitorId}); }
   submitConsultation(body: {name:string;email:string;phone:string;summary:string}) {
-    return this.http.post<{id:number;token:string}>('/api/public/consultations',body);
+    return this.http.post<{id:number}>('/api/public/consultations',body);
   }
-  trackConsultation(body: {id:number|null;token:string}) {
-    return this.http.post<import('./models').ConsultationTracking>('/api/public/consultations/track',body);
+  requestConsultationCode(contact:string){return this.http.post<{challengeId:string;resendAfterSeconds:number}>('/api/public/consultations/verification/request',{contact});}
+  verifyConsultationCode(challengeId:string,code:string){return this.http.post<{accessToken:string;expiresAt:string}>('/api/public/consultations/verification/verify',{challengeId,code});}
+  trackConsultation(body: {accessToken:string}) {
+    return this.http.post<import('./models').ConsultationTracking[]>('/api/public/consultations/track',body);
   }
-  replyAsVisitor(body: {id:number;token:string;response:string}) {
+  replyAsVisitor(body: {id:number;accessToken:string;response:string}) {
     return this.http.post<import('./models').ConsultationTracking>('/api/public/consultations/reply',body);
   }
   listConsultationRequests() {

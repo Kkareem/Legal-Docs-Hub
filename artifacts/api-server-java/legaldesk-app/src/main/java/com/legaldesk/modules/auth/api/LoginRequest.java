@@ -1,10 +1,3 @@
 package com.legaldesk.modules.auth.api;
-
-import jakarta.validation.constraints.Email;
-import jakarta.validation.constraints.NotBlank;
-
-public record LoginRequest(
-        @Email @NotBlank String email,
-        @NotBlank String password
-) {
-}
+import jakarta.validation.constraints.*;
+public record LoginRequest(@NotBlank @Pattern(regexp="[0-9]{14}") String nationalId,@NotBlank @Size(max=128) String password){}

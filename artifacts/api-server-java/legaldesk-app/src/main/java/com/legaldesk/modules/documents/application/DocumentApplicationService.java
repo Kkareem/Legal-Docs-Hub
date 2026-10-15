@@ -49,7 +49,7 @@ public class DocumentApplicationService {
     }
     public void delete(Long id) { checkMetadataOnly(id); repository.delete(findEntity(id)); }
     private void checkMetadataOnly(Long id) {
-        if (jdbc.queryForObject("SELECT COUNT(*) FROM documents WHERE id=? AND content IS NOT NULL", Long.class, id)>0)
+        if (jdbc.queryForObject("SELECT COUNT(*) FROM documents WHERE id=? AND (storage_key IS NOT NULL OR content IS NOT NULL)", Long.class, id)>0)
             throw new BusinessRuleViolationException("Stored attachments cannot be changed through metadata operations");
     }
     private void apply(DocumentEntity entity, DocumentUpsertRequest request, boolean creating) {

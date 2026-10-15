@@ -25,7 +25,7 @@ import java.util.List;
 public class SecurityConfig {
 
     @Bean
-    public SecurityFilterChain securityFilterChain(HttpSecurity http, UserEntityRepository users) throws Exception {
+    public SecurityFilterChain securityFilterChain(HttpSecurity http, UserEntityRepository users, JwtService jwt, com.legaldesk.modules.settings.application.SettingsService settings) throws Exception {
         http
                 .csrf(csrf -> csrf.disable())
                 .cors(Customizer.withDefaults())
@@ -44,17 +44,20 @@ public class SecurityConfig {
                         .requestMatchers("/api/client-portal/**").hasRole("CLIENT")
                         .anyRequest().hasAnyRole("ADMIN","OWNER","LAWYER")
                 )
-                .sessionManagement(Customizer.withDefaults())
+                .sessionManagement(session -> session.sessionCreationPolicy(org.springframework.security.config.http.SessionCreationPolicy.STATELESS))
+                .securityContext(context -> context.securityContextRepository(new org.springframework.security.web.context.NullSecurityContextRepository()))
+                .exceptionHandling(errors -> errors.authenticationEntryPoint((req,res,ex) -> {res.setStatus(401);res.setContentType("application/json");res.getWriter().write("{\"message\":\"Sign in required\"}");}))
                 .httpBasic(httpBasic -> httpBasic.disable())
                 .formLogin(form -> form.disable())
                 .logout(logout -> logout.disable());
+        http.addFilterBefore(new JwtAuthenticationFilter(jwt,users,settings), org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter.class);
         http.addFilterBefore(new PasswordChangeFilter(users), org.springframework.security.web.access.intercept.AuthorizationFilter.class);
         return http.build();
     }
 
     @Bean
     public UserDetailsService userDetailsService(UserEntityRepository userRepository) {
-        return username -> userRepository.findByEmailIgnoreCase(username)
+        return username -> userRepository.findByNationalId(username)
                 .map(AppUserPrincipal::from)
                 .orElseThrow(() -> new UsernameNotFoundException("User not found"));
     }
@@ -88,7 +91,7 @@ public class SecurityConfig {
         ));
         configuration.setAllowedMethods(List.of("GET", "POST", "PATCH", "PUT", "DELETE", "OPTIONS"));
         configuration.setAllowedHeaders(List.of("*"));
-        configuration.setExposedHeaders(List.of("Set-Cookie"));
+        configuration.setExposedHeaders(List.of("X-Session-Expires-At"));
 
         UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
         source.registerCorsConfiguration("/**", configuration);

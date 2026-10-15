@@ -6,7 +6,7 @@ DO $$ DECLARE client_key BIGINT; first_case BIGINT; second_case BIGINT; file_key
  INSERT INTO clients(name,status) VALUES('Activity transaction test','active') RETURNING id INTO client_key;
  INSERT INTO cases(case_number,type,client_id,status) VALUES('ACTIVITY-TEST-A','civil',client_key,'active') RETURNING id INTO first_case;
  INSERT INTO cases(case_number,type,client_id,status) VALUES('ACTIVITY-TEST-B','civil',client_key,'active') RETURNING id INTO second_case;
- INSERT INTO documents(case_id,client_id,file_name,file_url,content,file_size) VALUES(first_case,client_key,'test.bin','',decode('00ff','hex'),2) RETURNING id INTO file_key;
+ INSERT INTO documents(case_id,client_id,file_name,file_url,storage_key,file_size) VALUES(first_case,client_key,'test.bin','',gen_random_uuid()::text||'.bin',2) RETURNING id INTO file_key;
  UPDATE documents SET case_id=second_case,is_original=true WHERE id=file_key;
  IF (SELECT COUNT(*) FROM case_activity WHERE entity='documents' AND entity_id=file_key AND action='UPDATE')<>2 THEN RAISE EXCEPTION 'Transfer must be recorded in both case histories'; END IF;
  UPDATE documents SET case_id=NULL WHERE id=file_key;

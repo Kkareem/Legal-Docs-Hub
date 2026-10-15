@@ -29,12 +29,10 @@
           </select>
         </div>
         <div>
-          <label class="label">الموكلون * — يمكن اختيار أكثر من موكل</label>
-          @for(client of clients();track client.id){<label style="display:block"><input type="checkbox" [checked]="form().clientIds?.includes(client.id)" (change)="toggle('clientIds',client.id)"> {{client.name}}</label>}
+          <app-member-picker controlId="create-clientIds" label="الموكلون * — يمكن اختيار أكثر من موكل" kind="موكلًا" [options]="clients()" [selectedIds]="form().clientIds || []" (selectedIdsChange)="updateForm('clientIds', $event)" />
         </div>
         <div>
-          <label class="label">المحامون — يمكن اختيار أكثر من محامٍ</label>
-          @for(user of lawyers();track user.id){<label style="display:block"><input type="checkbox" [checked]="form().lawyerIds?.includes(user.id)" (change)="toggle('lawyerIds',user.id)"> {{user.name}}</label>}
+          <app-member-picker controlId="create-lawyerIds" label="المحامون — يمكن اختيار أكثر من محامٍ" kind="محاميًا" [options]="lawyers()" [selectedIds]="form().lawyerIds || []" (selectedIdsChange)="updateForm('lawyerIds', $event)" />
         </div>
         <div>
           <label class="label">الحالة</label>

@@ -32,7 +32,7 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Component;
 
 @Component
-@Profile("local")
+@Profile({"dev", "local"})
 public class DevDataSeeder implements CommandLineRunner {
     private final UserEntityRepository userRepository;
     private final ClientEntityRepository clientRepository;
@@ -86,6 +86,7 @@ public class DevDataSeeder implements CommandLineRunner {
         UserEntity owner = new UserEntity();
         owner.setName("Ahmed Al Mohamy");
         owner.setEmail("admin@legaldesk.sa");
+        owner.setNationalId("00000000000001");
         owner.setPasswordHash(passwordEncoder.encode("password123"));
         owner.setPhone("+966500000001");
         owner.setRole("owner");
@@ -97,6 +98,7 @@ public class DevDataSeeder implements CommandLineRunner {
         UserEntity lawyer = new UserEntity();
         lawyer.setName("Sara Al Qahtani");
         lawyer.setEmail("sara@legaldesk.sa");
+        lawyer.setNationalId("00000000000002");
         lawyer.setPasswordHash(passwordEncoder.encode("password123"));
         lawyer.setPhone("+966500000002");
         lawyer.setRole("lawyer");

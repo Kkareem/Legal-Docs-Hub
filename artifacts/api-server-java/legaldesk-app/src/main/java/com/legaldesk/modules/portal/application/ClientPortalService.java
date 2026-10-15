@@ -14,12 +14,15 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 
 @Service
-@Transactional
+@Transactional(rollbackFor=Exception.class)
 public class ClientPortalService {
+ private final com.legaldesk.modules.documents.application.AttachmentStorage storage;
+ @org.springframework.beans.factory.annotation.Autowired private com.legaldesk.modules.settings.application.SettingsService settings;
+ @org.springframework.beans.factory.annotation.Autowired private com.legaldesk.modules.consultations.application.ConsultationContactLinker linker;
  private final JdbcTemplate jdbc;
  private final UserEntityRepository users;
  private final PasswordEncoder encoder;
- public ClientPortalService(JdbcTemplate jdbc,UserEntityRepository users,PasswordEncoder encoder){this.jdbc=jdbc;this.users=users;this.encoder=encoder;}
+ public ClientPortalService(JdbcTemplate jdbc,UserEntityRepository users,PasswordEncoder encoder,com.legaldesk.modules.documents.application.AttachmentStorage storage){this.storage=storage;this.jdbc=jdbc;this.users=users;this.encoder=encoder;}
  public long userId(Authentication a){return ((AppUserPrincipal)a.getPrincipal()).id();}
  public boolean admin(Authentication a){return a.getAuthorities().stream().anyMatch(v->Set.of("ROLE_ADMIN","ROLE_OWNER").contains(v.getAuthority()));}
  public Map<String,Object> one(String sql,Object...args){var rows=jdbc.queryForList(sql,args);if(rows.isEmpty())throw new NotFoundException("Record not found");return rows.getFirst();}
@@ -30,26 +33,29 @@ public class ClientPortalService {
   if(!admin(a) && jdbc.queryForObject("SELECT COUNT(*) FROM case_lawyers WHERE case_id=? AND user_id=?",Long.class,id,userId(a))==0)throw new NotFoundException("Case not found");
   return c;
  }
- public Map<String,Object> createAccount(long id,String email,String password,Authentication a){
+ public Map<String,Object> createAccount(long id,String nationalId,String email,String phone,String password,Authentication a){
   var c=one("SELECT id,name,phone,user_id,office_id FROM clients WHERE id=? FOR UPDATE",id);
   if(!admin(a) && jdbc.queryForObject("SELECT COUNT(*) FROM case_clients cc JOIN case_lawyers l ON l.case_id=cc.case_id WHERE cc.client_id=? AND l.user_id=?",Long.class,id,userId(a))==0)
    throw new NotFoundException("Client not found");
   if(c.get("user_id")!=null)throw new BusinessRuleViolationException("Client already has an account");
-  email=email.trim().toLowerCase(Locale.ROOT);
-  if(users.findByEmailIgnoreCase(email).isPresent())throw new BusinessRuleViolationException("Email already exists");
-  var user=new UserEntity();user.setName((String)c.get("name"));user.setEmail(email);user.setPhone((String)c.get("phone"));
+  nationalId=com.legaldesk.shared.security.ContactDetails.identity(nationalId);
+  email=com.legaldesk.shared.security.ContactDetails.email(email);phone=com.legaldesk.shared.security.ContactDetails.phone(phone);
+  if(users.findByNationalId(nationalId).isPresent())throw new BusinessRuleViolationException("Identity number already exists");
+  if(email!=null&&users.findByEmailIgnoreCase(email).isPresent())throw new BusinessRuleViolationException("Email already exists");
+  var user=new UserEntity();user.setName((String)c.get("name"));user.setNationalId(nationalId);user.setEmail(email);user.setPhone(phone);
   user.setPasswordHash(encoder.encode(password));user.setRole("client");user.setMustChangePassword(true);user.setActive(true);
   if(c.get("office_id")!=null)user.setOfficeId(((Number)c.get("office_id")).longValue());
   user=users.saveAndFlush(user);
-  jdbc.update("UPDATE clients SET user_id=?,email=?,updated_at=NOW() WHERE id=?",user.getId(),email,id);
-  return Map.of("id",user.getId(),"email",email,"mustChangePassword",true);
+  jdbc.update("UPDATE clients SET user_id=?,national_id=?,email=?,phone=?,updated_at=NOW() WHERE id=?",user.getId(),nationalId,email,phone,id);
+  linker.link(id,email,phone);
+  return Map.of("id",user.getId(),"nationalId",nationalId,"mustChangePassword",true);
  }
  public Map<String,Object> overview(Authentication a){
   long id=clientId(a);
   var client=one("SELECT id,name,email,phone FROM clients WHERE id=?",id);
   var cases=jdbc.queryForList("SELECT c.id,c.case_number,c.court_case_number,c.type,c.court,c.division,c.status,c.description,c.lead_lawyer_id,u.name AS lawyer_name,c.created_at,c.updated_at FROM cases c LEFT JOIN users u ON u.id=c.lead_lawyer_id WHERE EXISTS(SELECT 1 FROM case_clients cc WHERE cc.case_id=c.id AND cc.client_id=?) ORDER BY c.created_at DESC",id);
   for(var c:cases)c.put("lawyers",caseLawyers(((Number)c.get("id")).longValue()));
-  var hearings=jdbc.queryForList("SELECT h.id,h.case_id,c.case_number,h.datetime,h.court,h.type,h.status FROM hearings h JOIN cases c ON c.id=h.case_id WHERE EXISTS(SELECT 1 FROM case_clients cc WHERE cc.case_id=c.id AND cc.client_id=?) ORDER BY h.datetime",id);
+  var hearings=jdbc.queryForList("SELECT h.id,h.case_id,c.case_number,h.datetime,h.court,h.type,h.status,h.hearing_number FROM hearings h JOIN cases c ON c.id=h.case_id WHERE EXISTS(SELECT 1 FROM case_clients cc WHERE cc.case_id=c.id AND cc.client_id=?) ORDER BY h.datetime",id);
   var payments=jdbc.queryForList("SELECT p.id,p.case_id,c.case_number,p.amount,p.type,p.status,p.paid_at,p.notes,p.created_at FROM payments p LEFT JOIN cases c ON c.id=p.case_id WHERE p.client_id=? ORDER BY p.created_at DESC",id);
   var consults=jdbc.queryForList("SELECT id,summary,status,response,created_at FROM consultations WHERE client_id=? ORDER BY created_at DESC",id);
   var requests=jdbc.queryForList("SELECT id,case_id,summary,status,created_at FROM consultation_requests WHERE client_id=? ORDER BY created_at DESC",id);
@@ -63,19 +69,24 @@ public class ClientPortalService {
   // Internal client notes and hearing notes are intentionally excluded from portal projections.
   var safe=new LinkedHashMap<String,Object>();
   for(String key:List.of("id","case_number","court_case_number","type","court","division","status","description","lawyer_name","lead_lawyer_id","created_at","updated_at"))safe.put(key,c.get(key));
-  return Map.of("case",safe,
+  var result=new LinkedHashMap<String,Object>(Map.of("case",safe,
    "updates",jdbc.queryForList("SELECT cu.id,cu.title,cu.body,cu.status,cu.created_at,u.name AS author_name FROM case_updates cu LEFT JOIN users u ON u.id=cu.created_by WHERE cu.case_id=? ORDER BY cu.id",id),
-   "hearings",jdbc.queryForList("SELECT id,datetime,court,type,status FROM hearings WHERE case_id=? ORDER BY datetime",id),
-   "files",jdbc.queryForList("SELECT id,file_name,file_size,created_at FROM documents WHERE content IS NOT NULL AND case_id=? ORDER BY id",id),
-   "documents",jdbc.queryForList("SELECT id,file_name,doc_type,created_at FROM documents WHERE content IS NULL AND case_id=? ORDER BY id",id),
+   "hearings",jdbc.queryForList("SELECT id,hearing_number,datetime,court,type,status,created_at FROM hearings WHERE case_id=? ORDER BY datetime",id),
+   "files",jdbc.queryForList("SELECT id,file_name,file_size,client_request_id,created_at FROM documents WHERE (storage_key IS NOT NULL OR content IS NOT NULL) AND case_id=? ORDER BY id",id),
+   "documents",jdbc.queryForList("SELECT id,file_name,doc_type,created_at FROM documents WHERE storage_key IS NULL AND content IS NULL AND case_id=? ORDER BY id",id),
    "reviews",jdbc.queryForList("SELECT r.stars,r.comment,r.lawyer_id,r.client_id,r.created_at,u.name AS lawyer_name,cl.name AS client_name FROM case_reviews r JOIN users u ON u.id=r.lawyer_id JOIN clients cl ON cl.id=r.client_id WHERE r.case_id=? AND (? OR r.client_id=?)",id,staff,staff?null:clientId(a)),
    "payments",casePayments(id,staff?null:clientId(a)),
    "lawyers",caseLawyers(id),
-   "clients",staff?jdbc.queryForList("SELECT cl.id,cl.name FROM case_clients cc JOIN clients cl ON cl.id=cc.client_id WHERE cc.case_id=? ORDER BY cl.id",id):List.of());
+   "clients",staff?jdbc.queryForList("SELECT cl.id,cl.name FROM case_clients cc JOIN clients cl ON cl.id=cc.client_id WHERE cc.case_id=? ORDER BY cl.id",id):List.of()));
+  result.put("reports",jdbc.queryForList("SELECT r.*,h.hearing_number,h.datetime AS hearing_datetime,h.court,u.name AS author_name FROM hearing_reports r JOIN hearings h ON h.id=r.hearing_id LEFT JOIN users u ON u.id=r.created_by WHERE r.case_id=? ORDER BY r.id",id));
+  var requests=jdbc.queryForList("SELECT r.*,h.hearing_number,t.hearing_number AS target_hearing_number,t.datetime AS target_hearing_datetime,cl.name AS client_name,u.name AS completed_by_name FROM case_client_requests r JOIN hearings h ON h.id=r.hearing_id LEFT JOIN hearings t ON t.id=r.target_hearing_id JOIN clients cl ON cl.id=r.client_id LEFT JOIN users u ON u.id=r.completed_by WHERE r.case_id=? AND (? OR r.client_id=?) ORDER BY r.id",id,staff,staff?null:clientId(a));
+  for(var request:requests)request.put("files",jdbc.queryForList("SELECT id,file_name FROM documents WHERE client_request_id=? ORDER BY id",request.get("id")));
+  result.put("clientRequests",requests);
+  return result;
  }
  private List<Map<String,Object>> caseLawyers(long id){return jdbc.queryForList("SELECT u.id,u.name FROM case_lawyers l JOIN users u ON u.id=l.user_id WHERE l.case_id=? ORDER BY u.id",id);}
  private List<Map<String,Object>> casePayments(long id,Long clientId){
-  var payments=jdbc.queryForList("SELECT p.id,p.client_id,cl.name AS client_name,p.amount,p.type,p.status,p.notes,p.paid_at FROM payments p JOIN clients cl ON cl.id=p.client_id WHERE p.case_id=? AND (CAST(? AS BIGINT) IS NULL OR p.client_id=?) ORDER BY p.id",id,clientId,clientId);
+  var payments=jdbc.queryForList("SELECT p.id,p.client_id,cl.name AS client_name,p.amount,p.type,p.status,p.notes,p.paid_at,p.created_at FROM payments p JOIN clients cl ON cl.id=p.client_id WHERE p.case_id=? AND (CAST(? AS BIGINT) IS NULL OR p.client_id=?) ORDER BY p.id",id,clientId,clientId);
   for(var p:payments)p.put("receipts",receipts(((Number)p.get("id")).longValue()));
   return payments;
  }
@@ -93,8 +104,14 @@ public class ClientPortalService {
  }
  private String safeName(String name){if(name==null)return "attachment";name=name.replace('\\','/');name=name.substring(name.lastIndexOf('/')+1).replaceAll("[\\p{Cntrl}]","_");return name.isBlank()?"attachment":name.substring(0,Math.min(200,name.length()));}
  public long saveFile(MultipartFile file,long clientId,Long caseId,Long paymentId,long userId)throws IOException{
-  validateFile(file);long id=jdbc.queryForObject("INSERT INTO documents(client_id,case_id,payment_id,uploaded_by,file_name,file_url,content_type,file_size,content) VALUES (?,?,?,?,?,'',?,?,?) RETURNING id",
-   Long.class,clientId,caseId,paymentId,userId,safeName(file.getOriginalFilename()),"application/octet-stream",file.getSize(),file.getBytes());
+  validateFile(file);String key;
+  Long linkedCase=caseId;
+  if(linkedCase==null&&paymentId!=null){var payment=one("SELECT case_id FROM payments WHERE id=?",paymentId);if(payment.get("case_id")!=null)linkedCase=((Number)payment.get("case_id")).longValue();}
+  String number=linkedCase==null?"":(String)one("SELECT case_number FROM cases WHERE id=?",linkedCase).get("case_number");
+  try(var input=file.getInputStream()){key=storage.write(input,storage.folder(linkedCase,number,paymentId),file.getOriginalFilename());}
+  storage.cleanupOnRollback(key);
+  long id=jdbc.queryForObject("INSERT INTO documents(client_id,case_id,payment_id,uploaded_by,file_name,file_url,content_type,file_size,storage_key) VALUES (?,?,?,?,?,'',?,?,?) RETURNING id",
+   Long.class,clientId,caseId,paymentId,userId,safeName(file.getOriginalFilename()),"application/octet-stream",file.getSize(),key);
   jdbc.update("UPDATE documents SET file_url=? WHERE id=?","/api/office-portal/documents/"+id+"/content",id);
   return id;
  }
@@ -103,7 +120,7 @@ public class ClientPortalService {
   return download(documentId,a,staff);
  }
  public Map<String,Object> download(long id,Authentication a,boolean staff){
-  var file=one("SELECT id,client_id,case_id FROM documents WHERE content IS NOT NULL AND id=?",id);
+  var file=one("SELECT id,client_id,case_id FROM documents WHERE (storage_key IS NOT NULL OR content IS NOT NULL) AND id=?",id);
   if(!staff){
    if(file.get("case_id")!=null)clientCase(((Number)file.get("case_id")).longValue(),a);
    else if(!Objects.equals(file.get("client_id"),clientId(a)))throw new NotFoundException("File not found");
@@ -112,7 +129,8 @@ public class ClientPortalService {
    if(file.get("case_id")==null)throw new NotFoundException("File not found");
    staffCase(((Number)file.get("case_id")).longValue(),a);
   }
-  return one("SELECT file_name,content FROM documents WHERE content IS NOT NULL AND id=?",id);
+  var result=one("SELECT file_name,storage_key FROM documents WHERE storage_key IS NOT NULL AND id=?",id);
+  return Map.of("file_name",result.get("file_name"),"content",storage.read((String)result.get("storage_key")));
  }
  public void review(long caseId,Long lawyerId,int stars,String comment,Authentication a){
   var c=one("SELECT * FROM cases WHERE id=? AND EXISTS(SELECT 1 FROM case_clients cc WHERE cc.case_id=cases.id AND cc.client_id=?) FOR UPDATE",caseId,clientId(a));
@@ -140,12 +158,6 @@ public class ClientPortalService {
   }
   return id;
  }
- public void linkConsultation(long id,UUID token,Authentication a){
-  var q=one("SELECT client_id FROM consultation_requests WHERE id=? AND tracking_token=? FOR UPDATE",id,token);
-  long clientId=clientId(a);
-  if(q.get("client_id")!=null && !Objects.equals(q.get("client_id"),clientId))throw new NotFoundException("Request not found");
-  jdbc.update("UPDATE consultation_requests SET client_id=? WHERE id=?",clientId,id);
- }
  public void consultationReply(long id,String response,Authentication a){
   var q=one("SELECT status FROM consultation_requests WHERE id=? AND client_id=? FOR UPDATE",id,clientId(a));
   if(!"answered".equals(q.get("status")))throw new BusinessRuleViolationException("Wait for office reply");
@@ -155,10 +167,8 @@ public class ClientPortalService {
  private List<Map<String,Object>> receipts(long paymentId){
   return jdbc.queryForList("SELECT pr.id,pr.file_id,pr.reference,pr.status,pr.review_notes,pr.created_at,pr.reviewed_at FROM payment_receipts pr WHERE pr.payment_id=? ORDER BY pr.id DESC",paymentId);
  }
- public Map<String,Object> bankDetails(){var rows=jdbc.queryForList("SELECT bank_name,beneficiary,iban,instructions FROM office_bank_details WHERE id=1");return rows.isEmpty()?Map.of():rows.getFirst();}
- public void saveBank(String bank,String beneficiary,String iban,String instructions){
-  jdbc.update("INSERT INTO office_bank_details(id,bank_name,beneficiary,iban,instructions) VALUES (1,?,?,?,?) ON CONFLICT(id) DO UPDATE SET bank_name=EXCLUDED.bank_name,beneficiary=EXCLUDED.beneficiary,iban=EXCLUDED.iban,instructions=EXCLUDED.instructions",bank,beneficiary,iban,instructions==null?"":instructions);
- }
+ public Map<String,Object> bankDetails(){return settings.get("office.bank");}
+ public void saveBank(String bank,String beneficiary,String iban,String instructions){settings.put("office.bank",Map.of("bank_name",bank,"beneficiary",beneficiary,"iban",iban,"instructions",instructions==null?"":instructions));}
  public long requestPayment(long caseId,Long payerId,java.math.BigDecimal amount,String notes,Authentication a){
   var c=staffCase(caseId,a);
   var clients=jdbc.queryForList("SELECT client_id FROM case_clients WHERE case_id=?",Long.class,caseId);

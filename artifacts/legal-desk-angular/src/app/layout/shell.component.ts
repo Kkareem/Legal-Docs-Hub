@@ -1,3 +1,4 @@
+import {IconComponent} from '../shared/icon.component';
 import { CommonModule } from '@angular/common';
 import { Component, computed, inject,signal } from '@angular/core';
 import { RouterLink, RouterLinkActive, RouterOutlet } from '@angular/router';
@@ -6,11 +7,12 @@ import { AuthService } from '../core/auth.service';
 @Component({
   selector: 'app-shell',
   standalone: true,
-  imports: [CommonModule, RouterOutlet, RouterLink, RouterLinkActive],
+  imports: [CommonModule, RouterOutlet, RouterLink, RouterLinkActive, IconComponent],
   templateUrl: './shell.component.html',
   styleUrl: './shell.component.scss',
 })
 export class ShellComponent {
+ readonly icons:Record<string,string>={'/dashboard':'grid','/clients':'users','/cases':'briefcase','/tasks':'check','/lawyers':'scale','/payment-management':'file','/consultation-requests':'message'};
  readonly menuOpen=signal(false);
   private readonly auth = inject(AuthService);
 

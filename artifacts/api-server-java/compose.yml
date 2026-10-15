@@ -15,5 +15,49 @@ services:
       timeout: 5s
       retries: 10
 
+  backend:
+    build:
+      context: .
+      args:
+        APP_PROFILE: stg
+    environment:
+      SPRING_PROFILES_ACTIVE: stg
+      DATABASE_URL: jdbc:postgresql://postgres:5432/legaldesk
+      DATABASE_USERNAME: legaldesk
+      DATABASE_PASSWORD: legaldesk
+      APP_PUBLIC_URL: ${APP_PUBLIC_URL:-http://localhost:4020}
+      APP_ATTACHMENTS_DIRECTORY: /app/.data/attachments
+      APP_SETTINGS_KEY_FILE: /app/.data/settings.key
+      SESSION_COOKIE_SECURE: "false"
+    ports:
+      - "127.0.0.1:${BACKEND_PORT:-8080}:8080"
+    volumes:
+      - ${APP_DATA_DIRECTORY:-./legaldesk-app/.data}:/app/.data
+    depends_on:
+      postgres:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "wget", "-q", "-O", "/dev/null", "http://127.0.0.1:8080/api/healthz"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 40s
+    restart: unless-stopped
+
+  frontend:
+    build:
+      context: ../legal-desk-angular
+    ports:
+      - "${FRONTEND_PORT:-4020}:80"
+    depends_on:
+      backend:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "wget", "-q", "-O", "/dev/null", "http://127.0.0.1/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+
 volumes:
   legaldesk-postgres:

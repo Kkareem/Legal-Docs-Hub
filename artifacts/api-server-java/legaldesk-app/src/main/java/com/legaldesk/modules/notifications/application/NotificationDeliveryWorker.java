@@ -31,6 +31,7 @@ public class NotificationDeliveryWorker {
     if(!Boolean.TRUE.equals(user.get("active"))||!Boolean.TRUE.equals(user.get(email?"email_enabled":"browser_enabled"))){finish(id,"skipped");continue;}
     if(Boolean.TRUE.equals(user.get("must_change_password"))){jdbc.update("UPDATE notification_delivery SET status='pending',attempts=attempts-1,next_attempt=NOW()+INTERVAL '1 hour' WHERE id=?",id);continue;}
     if(email){
+     if(user.get("email")==null||user.get("email").toString().isBlank()){finish(id,"skipped");continue;}
      if(!settings.emailEnabled()){finish(id,"skipped");continue;}
      settings.sendEmail((String)user.get("email"),(String)user.get("title"));
     }else{

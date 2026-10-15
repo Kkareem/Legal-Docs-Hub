@@ -1,5 +1,6 @@
 export interface User {
   mustChangePassword?: boolean;
+  nationalId?: string | null;
   id: number;
   name: string;
   email: string;
@@ -11,13 +12,14 @@ export interface User {
 }
 
 export interface LoginBody {
-  email: string;
+  nationalId: string;
   password: string;
 }
 
 export interface LoginResponse {
   user: User;
   token: string;
+  expiresAt?: string;
 }
 
 export interface Client {

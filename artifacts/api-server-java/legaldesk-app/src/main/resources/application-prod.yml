@@ -1,0 +1,17 @@
+server:
+  forward-headers-strategy: framework
+springdoc:
+  api-docs:
+    enabled: false
+  swagger-ui:
+    enabled: false
+logging:
+  level:
+    root: WARN
+    com.legaldesk: INFO
+app:
+  public-url: ${APP_PUBLIC_URL}
+  attachments-directory: ${APP_ATTACHMENTS_DIRECTORY:.data/prod/attachments}
+  settings-key-file: ${APP_SETTINGS_KEY_FILE:.data/prod/settings.key}
+  auth:
+    secure-cookie: ${SESSION_COOKIE_SECURE:true}

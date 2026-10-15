@@ -36,20 +36,19 @@ describe('Consultation conversation', () => {
     await TestBed.configureTestingModule({
       imports:[PublicConsultationComponent],
       providers:[provideRouter([]),{provide:ApiService,useValue:{
-        recordVisit:()=>of(undefined),trackConsultation:()=>of(tracked),replyAsVisitor:reply,
+        recordVisit:()=>of(undefined),trackConsultation:()=>of([tracked]),replyAsVisitor:reply,
       }}],
     }).compileComponents();
     const fixture=TestBed.createComponent(PublicConsultationComponent);
-    fixture.componentInstance.id=1;
-    fixture.componentInstance.token='secret-token';
+    fixture.componentInstance.accessToken='verified-access';
     fixture.componentInstance.track();
     fixture.detectChanges();
-    expect(fixture.nativeElement.querySelector('textarea[name="visitorReply"]')).not.toBeNull();
-    fixture.componentInstance.visitorReply='Visitor follow-up';
-    fixture.componentInstance.reply();
+    expect(fixture.nativeElement.querySelector('textarea[name="visitorReply1"]')).not.toBeNull();
+    fixture.componentInstance.replies[1]='Visitor follow-up';
+    fixture.componentInstance.reply(tracked);
     fixture.detectChanges();
-    expect(reply).toHaveBeenCalledWith({id:1,token:'secret-token',response:'Visitor follow-up'});
-    expect(fixture.nativeElement.querySelector('textarea[name="visitorReply"]')).toBeNull();
+    expect(reply).toHaveBeenCalledWith({id:1,accessToken:'verified-access',response:'Visitor follow-up'});
+    expect(fixture.nativeElement.querySelector('textarea[name="visitorReply1"]')).toBeNull();
     expect(fixture.nativeElement.textContent).toContain('Office response');
     expect(fixture.nativeElement.textContent).toContain('Visitor follow-up');
     expect(fixture.nativeElement.textContent).toContain('المحامي أحمد');

@@ -1,3 +1,4 @@
+import {PhoneInputComponent} from '../shared/phone-input.component';
 import { CommonModule } from '@angular/common';
 import { Component, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
@@ -8,17 +9,17 @@ import {PortalApiService} from '../core/portal-api.service';
 @Component({
   selector: 'app-clients',
   standalone: true,
-  imports: [CommonModule, FormsModule],
+  imports: [PhoneInputComponent, CommonModule, FormsModule],
   templateUrl: './clients.component.html',
 })
 export class ClientsComponent {
   private portal=inject(PortalApiService);
-  accountClient=signal<Client|null>(null);accountEmail='';accountPassword='';accountMessage=signal('');
-  openAccount(client:Client){this.accountClient.set(client);this.accountEmail=client.email||'';this.accountPassword='';this.accountMessage.set('');}
+  accountClient=signal<Client|null>(null);accountIdentity='';accountEmail='';accountPhone='';accountPassword='';accountMessage=signal('');
+  openAccount(client:Client){this.accountClient.set(client);this.accountIdentity=/^[0-9]{14}$/.test(client.nationalId||'')?client.nationalId!:'';this.accountEmail=client.email||'';this.accountPhone=client.phone||'';this.accountPassword='';this.accountMessage.set('');}
   createAccount(){const client=this.accountClient();if(!client||this.saving())return;this.saving.set(true);
-    this.portal.createAccount(client.id,this.accountEmail,this.accountPassword).subscribe({
-      next:()=>{this.saving.set(false);this.accountPassword='';this.accountClient.set(null);this.accountMessage.set('تم إنشاء الحساب. سلم الموكل البريد وكلمة المرور المؤقتة؛ سيغيرها عند أول دخول.');this.refresh();},
-      error:()=>{this.saving.set(false);this.accountMessage.set('تعذر إنشاء الحساب. تحقق من البريد وكلمة المرور والصلاحية؛ المحامي ينشئ حسابًا لموكل قضية مسندة إليه فقط.');}
+    this.portal.createAccount(client.id,this.accountIdentity,this.accountEmail,this.accountPhone,this.accountPassword).subscribe({
+      next:()=>{this.saving.set(false);this.accountPassword='';this.accountClient.set(null);this.accountMessage.set('تم إنشاء الحساب. سلم الموكل رقم الهوية وكلمة المرور المؤقتة؛ سيغيرها عند أول دخول.');this.refresh();},
+      error:()=>{this.saving.set(false);this.accountMessage.set('تعذر إنشاء الحساب. تحقق من رقم الهوية ووسيلة التواصل وكلمة المرور والصلاحية؛ المحامي ينشئ حسابًا لموكل قضية مسندة إليه فقط.');}
     });
   }
   private readonly api = inject(ApiService);

@@ -1,20 +1,23 @@
 <div class="login-page" dir="rtl">
+  <section class="login-visual"><a class="visual-brand" href="/"><app-icon name="scale"/><span>LegalDesk<small>المكتب القانوني</small></span></a><div class="visual-copy"><p class="eyebrow">العدالة غايتنا</p><h2>رؤية قانونية واضحة.<br><span>وثقة في كل خطوة.</span></h2><p>قضاياك، جلساتك، واستشاراتك.<br>كل ما تحتاجه في مكان واحد.</p></div><div class="visual-footer">التزام ومهنية <span>·</span> سرية وخصوصية <span>·</span> وضوح وثقة</div></section>
+  <section class="login-side"><a href="/" class="back-home">العودة للرئيسية ←</a>
   <div class="login-card card">
-    <div class="logo">LD</div>
-    <h1>LegalDesk</h1>
-    <p class="lead">دخول المكتب والمحامين والموكلين</p>
-    <a href="/consultation" class="btn btn-secondary">زائر؟ اطلب استشارة قانونية</a>
+    <div class="logo"><app-icon name="scale"/></div>
+    <p class="eyebrow">بوابة المكتب القانوني</p><h1>أهلًا بعودتك</h1>
+    <p class="lead">دخول المكتب والمحامين والموكلين برقم الهوية</p>
 
-    <form class="login-form" (ngSubmit)="submit()">
+
+    <form #loginForm="ngForm" class="login-form" (ngSubmit)="submit()">
       <div>
-        <label class="label" for="email">البريد الإلكتروني</label>
+        <label class="label" for="nationalId">رقم الهوية</label>
         <input
-          id="email"
+          id="nationalId"
           class="input"
-          type="email"
-          [ngModel]="email()"
-          (ngModelChange)="email.set($event)"
-          name="email"
+          type="text" inputmode="numeric" pattern="[0-9]{14}" minlength="14" maxlength="14"
+          [ngModel]="nationalId()"
+          (ngModelChange)="nationalId.set($event)"
+          name="nationalId"
+          dir="ltr" autocomplete="username"
           required
         />
       </div>
@@ -36,14 +39,17 @@
         <div class="error-banner">{{ error() }}</div>
       }
 
-      <button class="btn btn-primary full-width" type="submit" [disabled]="busy()">
+      <button class="btn btn-primary full-width" type="submit" [disabled]="busy() || loginForm.invalid">
         {{ busy() ? 'جارٍ تسجيل الدخول...' : 'تسجيل الدخول' }}
       </button>
     </form>
 
+    <a href="/forgot-password" class="visitor-link">نسيت كلمة المرور؟</a>
+    <a href="/consultation" class="visitor-link">زائر؟ اطلب استشارة قانونية ←</a>
     <div class="meta-row">
       <span>Demo:</span>
-      <strong>admin@legaldesk.sa / password123</strong>
+      <strong>00000000000001 / password123</strong>
     </div>
   </div>
+</section>
 </div>

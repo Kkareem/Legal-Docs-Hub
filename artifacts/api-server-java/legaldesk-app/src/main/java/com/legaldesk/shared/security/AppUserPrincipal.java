@@ -20,7 +20,7 @@ public record AppUserPrincipal(
         return new AppUserPrincipal(
                 user.getId(),
                 user.getName(),
-                user.getEmail(),
+                user.getNationalId(),
                 user.getPasswordHash(),
                 user.getRole(),
                 user.isActive()

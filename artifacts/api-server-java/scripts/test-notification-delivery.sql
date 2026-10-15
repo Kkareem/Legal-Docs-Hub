@@ -3,7 +3,7 @@ BEGIN;
 DO $$ DECLARE recipient BIGINT; n BIGINT; count_jobs BIGINT; BEGIN
  INSERT INTO users(name,email,password_hash,role) VALUES('Notification SQL fixture','notifications-transaction@example.com','unused','client') RETURNING id INTO recipient;
  INSERT INTO notification_preferences(user_id,site_enabled,email_enabled,browser_enabled) VALUES(recipient,FALSE,TRUE,FALSE);
- UPDATE office_email_settings SET enabled=TRUE WHERE id=1;
+ UPDATE settings SET value=jsonb_set(value,'{enabled}','true') WHERE name='office.email';
  PERFORM send_user_notification(recipient,'general','test','test',NULL,NULL);
  SELECT id INTO n FROM notifications WHERE user_id=recipient;
  IF n IS NULL OR (SELECT site_visible FROM notifications WHERE id=n) THEN RAISE EXCEPTION 'Email-only notification exposed on site'; END IF;
@@ -17,6 +17,7 @@ DO $$ DECLARE recipient BIGINT; n BIGINT; count_jobs BIGINT; BEGIN
  PERFORM send_user_notification(recipient,'general','muted','test',NULL,NULL);
  IF (SELECT COUNT(*) FROM notifications WHERE user_id=recipient)<>2 THEN RAISE EXCEPTION 'Muted user was notified'; END IF;
  DELETE FROM users WHERE id=recipient;
+ IF EXISTS(SELECT 1 FROM notification_preferences WHERE user_id=recipient) THEN RAISE EXCEPTION 'User preferences were not deleted'; END IF;
  IF EXISTS(SELECT 1 FROM notifications WHERE user_id=recipient) THEN RAISE EXCEPTION 'User notifications not removed'; END IF;
 END $$;
 ROLLBACK;

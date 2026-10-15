@@ -1,3 +1,5 @@
+import {RouterLink} from '@angular/router';
+import {IconComponent} from '../shared/icon.component';
 import {CurrencyService} from '../core/currency.service';
 import { CommonModule } from '@angular/common';
 import { Component, inject, signal } from '@angular/core';
@@ -8,7 +10,7 @@ import { ActivityItem, DashboardSummary, Hearing, PaymentSummary, TaskItem } fro
 @Component({
   selector: 'app-dashboard',
   standalone: true,
-  imports: [CommonModule],
+  imports: [CommonModule,RouterLink,IconComponent],
   templateUrl: './dashboard.component.html',
 })
 export class DashboardComponent {

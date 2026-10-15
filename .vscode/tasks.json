@@ -1,0 +1,56 @@
+{
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "label": "Maven build dev",
+      "type": "shell",
+      "command": "mvn",
+      "args": [
+        "-Pdev",
+        "-pl",
+        "legaldesk-app",
+        "-am",
+        "package",
+        "-DskipTests"
+      ],
+      "options": {
+        "cwd": "${workspaceFolder}/artifacts/api-server-java"
+      },
+      "problemMatcher": []
+    },
+    {
+      "label": "Maven build stg",
+      "type": "shell",
+      "command": "mvn",
+      "args": [
+        "-Pstg",
+        "-pl",
+        "legaldesk-app",
+        "-am",
+        "package",
+        "-DskipTests"
+      ],
+      "options": {
+        "cwd": "${workspaceFolder}/artifacts/api-server-java"
+      },
+      "problemMatcher": []
+    },
+    {
+      "label": "Maven build prod",
+      "type": "shell",
+      "command": "mvn",
+      "args": [
+        "-Pprod",
+        "-pl",
+        "legaldesk-app",
+        "-am",
+        "package",
+        "-DskipTests"
+      ],
+      "options": {
+        "cwd": "${workspaceFolder}/artifacts/api-server-java"
+      },
+      "problemMatcher": []
+    }
+  ]
+}

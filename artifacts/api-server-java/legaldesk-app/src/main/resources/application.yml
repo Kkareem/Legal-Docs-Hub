@@ -44,6 +44,7 @@ logging:
     root: INFO
 
 app:
+  attachments-directory: ${APP_ATTACHMENTS_DIRECTORY:.data/attachments}
   currency: ${APP_CURRENCY:SAR}
   public-url: ${APP_PUBLIC_URL:http://localhost:4020}
   settings-key-file: ${APP_SETTINGS_KEY_FILE:.data/settings.key}
