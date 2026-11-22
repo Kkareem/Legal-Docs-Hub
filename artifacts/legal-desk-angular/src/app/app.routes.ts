@@ -3,7 +3,6 @@ import { Routes } from '@angular/router';
 import { authGuard, adminGuard, passwordGuard, staffGuard, clientGuard } from './core/auth.guard';
 import {ClientPortalComponent} from './pages/client-portal.component';
 import {PaymentManagementComponent} from './pages/payment-management.component';
-import { LawyersComponent } from './pages/lawyers.component';
 import { ChangePasswordComponent } from './pages/change-password.component';
 import { ConsultationRequestsComponent } from './pages/consultation-requests.component';
 import { ShellComponent } from './layout/shell.component';
@@ -17,7 +16,8 @@ import { NotFoundComponent } from './pages/not-found.component';
 export const routes: Routes = [
   {path:'',pathMatch:'full',loadComponent:()=>import('./pages/home.component').then(m=>m.HomeComponent)},
   {path:'notifications',component:NotificationsComponent,canActivate:[authGuard]},
-  {path:'settings',loadComponent:()=>import('./pages/settings.component').then(m=>m.SettingsComponent),canActivate:[authGuard]},
+  {path:'settings',redirectTo:'account',pathMatch:'full'},
+  {path:'account',loadComponent:()=>import('./pages/settings.component').then(m=>m.SettingsComponent),canActivate:[authGuard]},
   {path:'my-account',component:ClientPortalComponent,canActivate:[authGuard,clientGuard]},
   { path: 'consultation', loadComponent:()=>import('./pages/public-consultation.component').then(m=>m.PublicConsultationComponent) },
   { path: 'change-password', component: ChangePasswordComponent, canActivate: [passwordGuard] },
@@ -32,7 +32,8 @@ export const routes: Routes = [
     children: [
       {path:'case-workspace/:id',loadComponent:()=>import('./pages/case-workspace.component').then(m=>m.CaseWorkspaceComponent),canActivate:[staffGuard]},
       {path:'payment-management',component:PaymentManagementComponent,canActivate:[adminGuard]},
-      { path: 'lawyers', component: LawyersComponent, canActivate: [adminGuard] },
+      {path:'lawyers/:id',loadComponent:()=>import('./pages/lawyer-details.component').then(m=>m.LawyerDetailsComponent),canActivate:[adminGuard]},
+      {path:'lawyers',loadComponent:()=>import('./pages/lawyers.component').then(m=>m.LawyersComponent),canActivate:[adminGuard]},
       { path: 'consultation-requests', component: ConsultationRequestsComponent, canActivate: [staffGuard] },
       { path: '', pathMatch: 'full', redirectTo: 'dashboard' },
       { path: 'dashboard', component: DashboardComponent },

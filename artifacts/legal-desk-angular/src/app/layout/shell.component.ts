@@ -1,3 +1,4 @@
+import {OfficeBrandingService} from '../core/office-branding.service';
 import {IconComponent} from '../shared/icon.component';
 import { CommonModule } from '@angular/common';
 import { Component, computed, inject,signal } from '@angular/core';
@@ -12,6 +13,7 @@ import { AuthService } from '../core/auth.service';
   styleUrl: './shell.component.scss',
 })
 export class ShellComponent {
+ readonly branding=inject(OfficeBrandingService);
  readonly icons:Record<string,string>={'/dashboard':'grid','/clients':'users','/cases':'briefcase','/tasks':'check','/lawyers':'scale','/payment-management':'file','/consultation-requests':'message'};
  readonly menuOpen=signal(false);
   private readonly auth = inject(AuthService);

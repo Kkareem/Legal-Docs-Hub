@@ -1,3 +1,4 @@
+import {OfficeBrandingService} from '../core/office-branding.service';
 import {IconComponent} from '../shared/icon.component';
 import { CommonModule } from '@angular/common';
 import { Component, inject, signal } from '@angular/core';
@@ -13,6 +14,7 @@ import { AuthService } from '../core/auth.service';
   styleUrl: './login.component.scss',
 })
 export class LoginComponent {
+ readonly branding=inject(OfficeBrandingService);
   private readonly auth = inject(AuthService);
   private readonly router = inject(Router);
 

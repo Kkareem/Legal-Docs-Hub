@@ -22,9 +22,13 @@ import {
 export class ApiService {
   removePushSubscription(endpoint:string){return this.http.delete<void>('/api/notifications/subscriptions',{...this.options(),body:{endpoint}});}
 
-  createLawyer(body: {name:string;nationalId:string;email:string;phone:string;password:string;role:string}) {
+  createLawyer(body: {address?:string;name:string;nationalId:string;email:string;phone:string;password:string;role:string}) {
     return this.http.post<User>('/api/users',body,this.options());
   }
+  lawyerDetails(id:number){return this.http.get<LawyerDetails>('/api/lawyers/'+id,this.options());}
+  lawyerCases(id:number){return this.http.get<LawyerCase[]>('/api/lawyers/'+id+'/cases',this.options());}
+  reassignLawyerCase(id:number,caseId:number,lawyerId:number|null){return this.http.post<void>('/api/lawyers/'+id+'/cases/'+caseId+'/reassign',{lawyerId},this.options());}
+  deleteLawyer(id:number){return this.http.delete<void>('/api/users/'+id,this.options());}
   updateUser(id:number,body:{nationalId?:string;email?:string;phone?:string}){return this.http.patch<User>('/api/users/'+id,body,this.options());}
   changePassword(body: {currentPassword:string;newPassword:string}) {
     return this.http.post<User>('/api/auth/change-password',body,this.options());
@@ -139,3 +143,6 @@ export class ApiService {
     return this.http.delete<void>(`${this.apiBase}/tasks/${id}`, this.options());
   }
 }
+
+export interface LawyerCase {id:number;title:string;case_number:string;type:string;court?:string;other_lawyers:{id:number;name:string}[];}
+export interface LawyerDetails {lawyer:{id:number;name:string;phone?:string;email?:string;address?:string;national_id?:string;active:boolean};cases:LawyerCase[];}

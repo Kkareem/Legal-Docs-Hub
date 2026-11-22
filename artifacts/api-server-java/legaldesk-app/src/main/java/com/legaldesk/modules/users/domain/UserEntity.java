@@ -33,6 +33,12 @@ public class UserEntity extends AuditedEntity {
     private String passwordHash;
 
     private String phone;
+    private String address;
+    @Column(name="deleted_at") private java.time.OffsetDateTime deletedAt;
+    public String getAddress(){return address;}
+    public void setAddress(String value){address=value;}
+    public java.time.OffsetDateTime getDeletedAt(){return deletedAt;}
+    public void setDeletedAt(java.time.OffsetDateTime value){deletedAt=value;}
 
     @Column(nullable = false)
     private String role = "lawyer";

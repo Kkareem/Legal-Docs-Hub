@@ -4,19 +4,21 @@ services:
     image: postgres:17
     environment:
       POSTGRES_DB: legaldesk
-      POSTGRES_USER: legaldesk
+      POSTGRES_USER: ${DATABASE_USERNAME:-kk_postgres}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in the environment file}
     ports:
       - "127.0.0.1:${POSTGRES_PORT:-5433}:5432"
     volumes:
       - legaldesk-postgres:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U legaldesk -d legaldesk"]
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
       interval: 5s
       timeout: 5s
       retries: 10
 
   backend:
+    container_name: be-legal-desk
+    image: be-legal-desk:${APP_IMAGE_TAG:-latest}
     build:
       context: .
       args:
@@ -28,7 +30,7 @@ services:
       BOOTSTRAP_OWNER_PHONE: ${BOOTSTRAP_OWNER_PHONE:-}
       BOOTSTRAP_OWNER_PASSWORD: ${BOOTSTRAP_OWNER_PASSWORD:-}
       DATABASE_URL: jdbc:postgresql://postgres:5432/legaldesk
-      DATABASE_USERNAME: legaldesk
+      DATABASE_USERNAME: ${DATABASE_USERNAME:-kk_postgres}
       DATABASE_PASSWORD: ${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in the environment file}
       APP_PUBLIC_URL: ${APP_PUBLIC_URL:-http://localhost:4021}
       APP_ATTACHMENTS_DIRECTORY: /app/.data/attachments
@@ -50,6 +52,8 @@ services:
     restart: unless-stopped
 
   frontend:
+    container_name: fe-legal-desk
+    image: fe-legal-desk:${APP_IMAGE_TAG:-latest}
     build:
       context: ../legal-desk-angular
     ports:

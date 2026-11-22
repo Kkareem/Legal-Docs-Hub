@@ -1,5 +1,5 @@
 <main class="page-shell" dir="rtl">
-<header class="toolbar"><div class="toolbar-spacer"><h1 class="section-title">بوابة الموكل</h1><p class="section-subtitle">أهلًا {{overview()?.client?.name || auth.user()?.name}} — متابعة قضاياك واستشاراتك ومدفوعاتك</p></div><button class="btn btn-secondary" (click)="load()">تحديث</button><button class="btn btn-secondary" (click)="logout()">تسجيل الخروج</button></header>
+<header class="toolbar"><div class="toolbar-spacer"><h1 class="section-title">بوابة الموكل</h1><p class="section-subtitle">أهلًا {{overview()?.client?.name || auth.user()?.name}} — متابعة قضاياك واستشاراتك ومدفوعاتك</p></div><button class="btn btn-secondary" (click)="load()">تحديث</button></header>
 <nav class="toolbar" style="margin:24px 0" aria-label="أقسام بوابة الموكل">
 @for(item of [{id:'cases',label:'قضاياي'},{id:'hearings',label:'جلساتي'},{id:'consultations',label:'استشاراتي'},{id:'payments',label:'المدفوعات'}];track item.id){
 <button class="btn" [class.btn-primary]="tab()===item.id" [class.btn-secondary]="tab()!==item.id" (click)="tab.set(item.id)">{{item.label}}</button>}
@@ -47,7 +47,10 @@
 </article>}@empty{<div class="card empty-state">لا توجد طلبات دفع.</div>}
 }
 @if(tab()==='consultations'){
-<form class="card panel grid" #consult="ngForm" (ngSubmit)="newConsultation()"><h2>استشارة جديدة للمكتب</h2><label>القضية (اختياري)<select class="select" name="caseId" [(ngModel)]="consultCaseId"><option [ngValue]="null">استشارة عامة</option>@for(c of data.cases;track c.id){<option [ngValue]="c.id">{{c.case_number}}</option>}</select></label><label>تفاصيل الاستشارة<textarea class="textarea" name="summary" [(ngModel)]="summary" required minlength="10" maxlength="10000"></textarea></label><button class="btn btn-primary" [disabled]="consult.invalid || busy()">إرسال الاستشارة</button></form>
+<div class="toolbar"><h2 class="toolbar-spacer">استشاراتي</h2><button class="btn btn-primary" (click)="openConsultation()">+ استشارة جديدة</button></div>
+@if(showConsultation()){<app-modal title="استشارة جديدة للمكتب" [busy]="busy()" (closed)="closeConsultation()"><form class="grid" #consult="ngForm" (ngSubmit)="newConsultation()"><label>القضية (اختياري)<select class="select" name="caseId" [(ngModel)]="consultCaseId"><option [ngValue]="null">استشارة عامة</option>@for(c of data.cases;track c.id){<option [ngValue]="c.id">{{c.case_number}}</option>}</select></label><label>تفاصيل الاستشارة<textarea class="textarea" name="summary" [(ngModel)]="summary" required minlength="10" maxlength="10000"></textarea></label>@if(consultationError()){<p role="alert">{{consultationError()}}</p>}<button class="btn btn-primary" [disabled]="consult.invalid || busy()">إرسال الاستشارة</button></form></app-modal>}
+@if(!data.requests.length&&!data.consultations.length){<p class="card empty-state">لا توجد استشارات سابقة.</p>}
+
 <p class="meta">تُربط استشارات الزائر تلقائيًا بالبريد أو الهاتف المسجل في حسابك. تواصل مع المكتب لتحديث وسيلة التواصل إذا كانت استشارة سابقة غير ظاهرة.</p>
 @for(q of data.requests;track q.id){<article class="card panel grid" style="margin-top:20px"><h3>استشارة #{{q.id}}</h3><p style="white-space:pre-wrap">{{q.summary}}</p>@for(m of q.messages;track m.id){<div class="card panel"><strong>{{m.sender_type==='staff'?(m.sender_name || 'المكتب'):'أنت'}}</strong><p style="white-space:pre-wrap">{{m.body}}</p></div>}
 @if(q.canReply){<label>ردك<textarea class="textarea" [(ngModel)]="replies[q.id]" maxlength="20000"></textarea></label><button class="btn btn-primary" [disabled]="busy()||!replies[q.id]?.trim()" (click)="reply(q.id)">إرسال الرد</button>}@else{<p class="meta">بانتظار رد المكتب</p>}

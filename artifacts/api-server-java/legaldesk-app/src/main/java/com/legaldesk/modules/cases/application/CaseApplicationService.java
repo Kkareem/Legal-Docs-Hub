@@ -61,6 +61,7 @@ public class CaseApplicationService {
         apply(entity, request.caseNumber(), request.courtCaseNumber(), request.type(), request.court(),
                 request.division(), clients.getFirst(), lawyers.isEmpty()?null:lawyers.getFirst(), request.status(),
                 request.opposingParty(), request.description());
+        entity.setTitle(request.title());
         entity=repository.saveAndFlush(entity);
         syncMembers(entity.getId(),clients,lawyers);
         return enrichOne(entity);
@@ -86,6 +87,7 @@ public class CaseApplicationService {
                 request.status() != null ? request.status() : entity.getStatus(),
                 request.opposingParty() != null ? request.opposingParty() : entity.getOpposingParty(),
                 request.description() != null ? request.description() : entity.getDescription());
+        if(request.title()!=null)entity.setTitle(request.title());
         entity=repository.saveAndFlush(entity);syncMembers(id,clients,lawyers);
         return enrichOne(entity);
     }
@@ -116,7 +118,7 @@ public class CaseApplicationService {
                 entity.getStatus(), entity.getOpposingParty(), entity.getDescription(), entity.getOfficeId(),
                 entity.getCreatedAt(), entity.getUpdatedAt(),
                 jdbc.queryForList("SELECT cl.id,cl.name FROM case_clients cc JOIN clients cl ON cl.id=cc.client_id WHERE cc.case_id=? ORDER BY cl.id",entity.getId()),
-                jdbc.queryForList("SELECT u.id,u.name FROM case_lawyers l JOIN users u ON u.id=l.user_id WHERE l.case_id=? ORDER BY u.id",entity.getId())
+                jdbc.queryForList("SELECT u.id,u.name FROM case_lawyers l JOIN users u ON u.id=l.user_id WHERE l.case_id=? ORDER BY u.id",entity.getId()),entity.getTitle()
         );
     }
 

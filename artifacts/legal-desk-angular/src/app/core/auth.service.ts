@@ -13,6 +13,7 @@ export class AuthService {
   private readonly router = inject(Router);
 
   readonly user = signal<User | null>(null);
+  readonly avatarUrl=signal<string|null>(null);
   readonly ready = signal(false);
   readonly loading = signal(false);
   readonly isAuthenticated = computed(() => !!this.user());

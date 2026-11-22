@@ -1,36 +1,32 @@
 import {PhoneInputComponent} from '../shared/phone-input.component';
-import { Component, inject, signal } from '@angular/core';
-import { FormsModule } from '@angular/forms';
-import { ApiService } from '../core/api.service';
-import { User } from '../core/models';
-@Component({standalone:true, imports:[PhoneInputComponent,FormsModule], template: `
-<section class="page-shell">
-<h1 class="section-title">إدارة المحامين</h1><p class="section-subtitle">أضف المحامي وسلمه كلمة مرور مؤقتة. سيختار كلمة مرور خاصة عند أول دخول.</p>
-<form class="card form-card grid" style="margin:24px 0" #form="ngForm" (ngSubmit)="create()">
-<div class="grid grid-2">
-<label>اسم المحامي<input class="input" name="name" [(ngModel)]="name" required maxlength="200"></label>
-<label>رقم الهوية<input class="input" name="nationalId" [(ngModel)]="nationalId" required pattern="[0-9]{14}" maxlength="14" inputmode="numeric" dir="ltr"></label>
-<label>البريد الإلكتروني<input class="input" name="email" [(ngModel)]="email" type="email" [required]="!phone.trim()" email></label>
-<label>الهاتف<app-phone-input name="phone" [(ngModel)]="phone" [required]="!email.trim()"></app-phone-input></label>
-<label>كلمة المرور المؤقتة<input class="input" name="password" [(ngModel)]="password" type="password" required minlength="10" maxlength="128" autocomplete="new-password"></label>
-</div><p class="meta">رقم الهوية 14 رقمًا، والبريد أو الهاتف مطلوب. كلمة المرور 10 أحرف على الأقل. شاركها مع المحامي بطريقة خاصة.</p>
-<button class="btn btn-primary" [disabled]="form.invalid || busy()">إضافة محامٍ</button>
-</form>
-@if(message()){<p role="status">{{message()}}</p>}
-<div class="card table-wrap"><table class="data-table"><thead><tr><th>الاسم</th><th>الهوية</th><th>البريد</th><th>الهاتف</th><th>الحالة</th></tr></thead><tbody>
-@for(user of lawyers();track user.id){<tr><td>{{user.name}}</td><td>{{user.nationalId || 'غير مسجل'}}</td><td>{{user.email || '—'}}</td><td>{{user.phone || '—'}}</td><td>{{user.active ? 'نشط' : 'معطل'}}</td></tr>}
-</tbody></table>@if(!lawyers().length){<p class="empty-state">لا يوجد محامون بعد.</p>}</div>
-</section>`})
+import {ModalComponent} from '../shared/modal.component';
+import {Component,inject,signal} from '@angular/core';
+import {FormsModule} from '@angular/forms';
+import {RouterLink} from '@angular/router';
+import {ApiService,LawyerCase} from '../core/api.service';
+import {User} from '../core/models';
+@Component({standalone:true,imports:[PhoneInputComponent,FormsModule,RouterLink,ModalComponent],template:`
+<section class="page-shell" dir="rtl">
+<header class="toolbar"><div class="toolbar-spacer"><h1 class="section-title">إدارة المحامين</h1><p class="section-subtitle">بيانات المحامين والقضايا المسندة إليهم.</p></div><button class="btn btn-primary" [disabled]="busy()" (click)="showCreate.set(true);modalMessage.set('')">+ إضافة محامٍ</button></header>
+@if(message()){<p role="status" class="card panel">{{message()}}</p>}
+<div class="card table-wrap" style="margin-top:24px"><table class="data-table"><thead><tr><th>الاسم</th><th>الهوية</th><th>البريد</th><th>الهاتف</th><th>الحالة</th><th>الإجراءات</th></tr></thead><tbody>
+@for(user of lawyers();track user.id){<tr><td>{{user.name}}</td><td>{{user.nationalId||'غير مسجل'}}</td><td>{{user.email||'—'}}</td><td dir="ltr">{{user.phone||'—'}}</td><td>{{user.active?'نشط':'معطل'}}</td><td><div class="toolbar"><a class="btn btn-secondary" [routerLink]="['/lawyers',user.id]">تفاصيل</a><button class="btn btn-danger" [disabled]="busy()" (click)="openDelete(user)">حذف</button></div></td></tr>}
+</tbody></table>@if(!lawyers().length){<p class="empty-state">{{loading()?'جارٍ تحميل المحامين...':'لا يوجد محامون بعد.'}}</p>}</div>
+@if(showCreate()){<app-modal title="إضافة محامٍ" [busy]="busy()" (closed)="showCreate.set(false)"><form class="grid" #form="ngForm" (ngSubmit)="create()"><div class="grid grid-2">
+<label>اسم المحامي<input class="input" name="name" [(ngModel)]="name" required maxlength="200"></label><label>رقم الهوية<input class="input" name="nationalId" [(ngModel)]="nationalId" required pattern="[0-9]{14}" inputmode="numeric" dir="ltr"></label>
+<label>البريد الإلكتروني<input class="input" name="email" [(ngModel)]="email" type="email" [required]="!phone.trim()" email maxlength="254"></label><label>الهاتف<app-phone-input name="phone" [(ngModel)]="phone" [required]="!email.trim()"></app-phone-input></label>
+</div><label>العنوان (اختياري)<textarea class="textarea" name="address" [(ngModel)]="address" maxlength="1000"></textarea></label><label>كلمة المرور المؤقتة<input class="input" name="password" [(ngModel)]="password" type="password" required minlength="10" maxlength="128" autocomplete="new-password"></label>
+<p class="meta">رقم الهوية 14 رقمًا، والبريد أو الهاتف مطلوب. سلّم المحامي كلمة المرور المؤقتة بطريقة خاصة؛ سيغيرها عند أول دخول.</p>@if(modalMessage()){<p role="alert">{{modalMessage()}}</p>}<button class="btn btn-primary" [disabled]="form.invalid||busy()">حفظ المحامي</button></form></app-modal>}
+@if(deleting();as user){<app-modal title="حذف المحامي" [busy]="busy()" (closed)="deleting.set(null)">@if(modalMessage()){<p role="alert">{{modalMessage()}}</p>}
+@if(deleteCases();as cases){@if(cases.length){<p>المحامي «{{user.name}}» مربوط على قضايا بالفعل ولا يمكن حذفه إلا بعد تعيين القضايا على محامٍ آخر أو رفعه منها.</p>
+<div class="table-wrap"><table class="data-table"><thead><tr><th>اسم القضية</th><th>رقم القضية</th><th>محامون آخرون</th></tr></thead><tbody>@for(c of cases;track c.id){<tr><td>{{c.title}}</td><td>{{c.case_number}}</td><td>@if(c.other_lawyers.length){نعم — @for(l of c.other_lawyers;track l.id){<span>{{l.name}} </span>}}@else{لا يوجد}</td></tr>}</tbody></table></div><a class="btn btn-primary" [routerLink]="['/lawyers',user.id]" (click)="deleting.set(null)">إدارة قضايا المحامي</a>
+}@else{<p>هل تريد فعلًا حذف المحامي «{{user.name}}»؟ سيتم إيقاف دخوله وإزالته من القائمة مع الاحتفاظ بسجل أعماله.</p><div class="toolbar"><button class="btn btn-danger" [disabled]="busy()" (click)="remove()">نعم، حذف المحامي</button><button class="btn btn-secondary" [disabled]="busy()" (click)="deleting.set(null)">إلغاء</button></div>}}@else{<p role="status">جارٍ فحص القضايا المرتبطة بالمحامي...</p>}</app-modal>}
+</section>`,styles:[`header{margin-bottom:20px}label{display:grid;gap:8px}p[role=alert]{color:var(--danger)}app-modal .btn{justify-self:start}app-modal .grid-2{grid-template-columns:repeat(2,minmax(0,1fr))}@media(max-width:540px){app-modal .grid-2{grid-template-columns:1fr}}`]})
 export class LawyersComponent {
- private api=inject(ApiService);
- lawyers=signal<User[]>([]);busy=signal(false);message=signal('');
- nationalId='';name='';email='';phone='';password='';
- constructor(){this.load();}
- load(){this.api.listUsers().subscribe({next: u=>this.lawyers.set(u.filter(x=>x.role==='lawyer')),error:()=>this.message.set('تعذر تحميل المحامين')});}
- create(){if(this.busy())return;this.busy.set(true);this.message.set('');
- this.api.createLawyer({name:this.name,nationalId:this.nationalId,email:this.email,phone:this.phone,password:this.password,role:'lawyer'}).subscribe({
- next:()=>{this.busy.set(false);this.message.set('تم إنشاء الحساب. سلم المحامي بيانات الدخول المؤقتة.');this.name='';this.nationalId='';this.email='';this.phone='';this.password='';this.load();},
- error:e=>{this.busy.set(false);this.message.set(e.error?.message==='Email already exists'?'البريد الإلكتروني مستخدم بالفعل':'تعذر إنشاء الحساب. راجع البيانات وحاول مجددًا.');}
- });}
+ private api=inject(ApiService);lawyers=signal<User[]>([]);loading=signal(true);busy=signal(false);message=signal('');modalMessage=signal('');showCreate=signal(false);deleting=signal<User|null>(null);deleteCases=signal<LawyerCase[]|null>(null);
+ nationalId='';name='';email='';phone='';password='';address='';
+ constructor(){this.api.listUsers().subscribe({next:u=>{this.lawyers.set(u.filter(x=>x.role==='lawyer'));this.loading.set(false);},error:()=>{this.loading.set(false);this.message.set('تعذر تحميل المحامين');}});}
+ create(){if(this.busy())return;this.busy.set(true);this.modalMessage.set('');this.api.createLawyer({name:this.name,nationalId:this.nationalId,email:this.email,phone:this.phone,password:this.password,address:this.address,role:'lawyer'}).subscribe({next:user=>{this.lawyers.update(rows=>[user,...rows]);this.busy.set(false);this.showCreate.set(false);this.message.set('تم إنشاء حساب المحامي وإضافته إلى القائمة');this.name='';this.nationalId='';this.email='';this.phone='';this.password='';this.address='';},error:e=>{this.busy.set(false);this.modalMessage.set(e.error?.message==='Email already exists'?'البريد الإلكتروني مستخدم بالفعل':e.error?.message==='Identity number already exists'?'رقم الهوية مستخدم بالفعل':'تعذر إنشاء الحساب. راجع البيانات وحاول مجددًا.');}});}
+ openDelete(user:User){this.deleting.set(user);this.deleteCases.set(null);this.modalMessage.set('');this.api.lawyerCases(user.id).subscribe({next:cases=>{if(this.deleting()?.id===user.id)this.deleteCases.set(cases);},error:()=>this.modalMessage.set('تعذر فحص قضايا المحامي. حاول مرة أخرى.')});}
+ remove(){const user=this.deleting();if(!user||this.busy()||!this.deleteCases()||this.deleteCases()!.length)return;this.busy.set(true);this.api.deleteLawyer(user.id).subscribe({next:()=>{this.lawyers.update(rows=>rows.filter(l=>l.id!==user.id));this.deleting.set(null);this.busy.set(false);this.message.set('تم حذف المحامي من القائمة');},error:e=>{this.busy.set(false);this.modalMessage.set(e.error?.message||'تعذر حذف المحامي');this.api.lawyerCases(user.id).subscribe({next:cases=>this.deleteCases.set(cases),error:()=>{}});}});}
 }
-

@@ -16,6 +16,8 @@ services:
       retries: 10
 
   backend:
+    container_name: be-legal-desk
+    image: be-legal-desk:${APP_IMAGE_TAG:-latest}
     build:
       context: .
       args:
@@ -45,6 +47,8 @@ services:
     restart: unless-stopped
 
   frontend:
+    container_name: fe-legal-desk
+    image: fe-legal-desk:${APP_IMAGE_TAG:-latest}
     build:
       context: ../legal-desk-angular
     ports:

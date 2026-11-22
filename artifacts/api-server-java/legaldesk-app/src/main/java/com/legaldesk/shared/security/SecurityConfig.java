@@ -40,7 +40,7 @@ public class SecurityConfig {
                                 "/swagger-ui/**",
                                 "/swagger-ui.html"
                         ).permitAll()
-                        .requestMatchers("/api/notifications/**","/api/settings/application").authenticated()
+                        .requestMatchers("/api/notifications/**","/api/settings/application","/api/account","/api/account/**").authenticated()
                         .requestMatchers("/api/client-portal/**").hasRole("CLIENT")
                         .anyRequest().hasAnyRole("ADMIN","OWNER","LAWYER")
                 )

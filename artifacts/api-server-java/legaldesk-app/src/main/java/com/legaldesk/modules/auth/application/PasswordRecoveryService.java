@@ -13,6 +13,7 @@ import com.legaldesk.common.domain.BusinessRuleViolationException;
 
 @Service
 public class PasswordRecoveryService {
+ @org.springframework.beans.factory.annotation.Autowired private AccountChangeMessages accountMessages;
  private final JdbcTemplate jdbc;private final SettingsService settings;private final NotificationSettingsService mail;private final UserEntityRepository users;private final PasswordEncoder encoder;
  public PasswordRecoveryService(JdbcTemplate jdbc,SettingsService settings,NotificationSettingsService mail,UserEntityRepository users,PasswordEncoder encoder){this.jdbc=jdbc;this.settings=settings;this.mail=mail;this.users=users;this.encoder=encoder;}
  private String hash(String value){try{return HexFormat.of().formatHex(MessageDigest.getInstance("SHA-256").digest(value.getBytes(StandardCharsets.UTF_8)));}catch(Exception e){throw new IllegalStateException(e);}}
@@ -42,6 +43,7 @@ public class PasswordRecoveryService {
   if(encoder.matches(password,user.getPasswordHash()))throw new BusinessRuleViolationException("اختر كلمة مرور مختلفة عن كلمة المرور الحالية");
   user.setPasswordHash(encoder.encode(password));user.setMustChangePassword(false);user.setAuthVersion(user.getAuthVersion()+1);users.saveAndFlush(user);
   jdbc.update("UPDATE password_reset_tokens SET used_at=NOW() WHERE user_id=? AND used_at IS NULL",userId);
+  accountMessages.record(userId,"تمت إعادة ضبط كلمة مرور حسابك","تمت إعادة ضبط كلمة مرور حسابك بنجاح. تم إنهاء جلسات الدخول السابقة.",user.getEmail());
  }
  private BusinessRuleViolationException invalid(){return new BusinessRuleViolationException("رابط الاستعادة غير صالح أو انتهت صلاحيته. اطلب رابطًا جديدًا.");}
 }

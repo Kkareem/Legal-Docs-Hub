@@ -12,6 +12,7 @@ public record UserResponse(
         Long officeId,
         boolean active,
         OffsetDateTime createdAt,
-        OffsetDateTime updatedAt
+        OffsetDateTime updatedAt,
+        String address
 ) {
 }

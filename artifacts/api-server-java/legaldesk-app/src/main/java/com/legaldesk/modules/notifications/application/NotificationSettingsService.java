@@ -47,7 +47,7 @@ public class NotificationSettingsService {
  public String vapidSubject(){return vapidSubject;}
  public boolean emailEnabled(){return Boolean.TRUE.equals(settings.get("office.email").get("enabled"));}
  public Map<String,Object> emailSettings(){
-  var row=settings.get("office.email");var safe=new LinkedHashMap<String,Object>();safe.put("enabled",row.getOrDefault("enabled",false));safe.put("email",row.getOrDefault("username",""));safe.put("password_configured",!Objects.toString(row.get("password_encrypted"),"").isBlank());safe.put("delivery",jdbc.queryForList("SELECT status,COUNT(*) AS count FROM notification_delivery WHERE channel='email' GROUP BY status"));return safe;
+  var row=settings.get("office.email");var safe=new LinkedHashMap<String,Object>();safe.put("enabled",row.getOrDefault("enabled",false));safe.put("email",row.getOrDefault("username",""));safe.put("password_configured",!Objects.toString(row.get("password_encrypted"),"").isBlank());safe.put("delivery",jdbc.queryForList("SELECT status,COUNT(*) AS count FROM (SELECT status FROM notification_delivery WHERE channel='email' UNION ALL SELECT status FROM account_messages) deliveries GROUP BY status"));return safe;
  }
  @Transactional
  public void saveEmail(boolean enabled,String host,int port,String username,String password,String from,String tls){

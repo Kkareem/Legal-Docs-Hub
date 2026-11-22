@@ -26,7 +26,7 @@ public class AttachmentStorage implements ApplicationRunner {
   String[] parts=key.split("/",-1);
   for(String part:parts)if(part.equals(".")||part.equals("..")||!part.matches("[\\p{L}\\p{N}._-]+"))throw new NotFoundException("Attachment not found");
   boolean legacy=key.matches("[a-f0-9-]{36}\\.bin");
-  if(!legacy&&!(parts.length>=3&&Set.of("Cases","cases","receipts").contains(parts[0])))throw new NotFoundException("Attachment not found");
+  if(!legacy&&!(parts.length>=3&&Set.of("Cases","cases","receipts","Profiles").contains(parts[0])))throw new NotFoundException("Attachment not found");
   Path path=root.resolve(key).normalize();if(!path.startsWith(root))throw new NotFoundException("Attachment not found");
   Path cursor=root;for(String part:parts){cursor=cursor.resolve(part);if(Files.isSymbolicLink(cursor))throw new NotFoundException("Attachment not found");}
   return path;

@@ -17,10 +17,10 @@ class EnvironmentOwnerBootstrapTest {
     }
     @Test void newOwnerUsesIdentityHashedPasswordAndMandatoryFirstPasswordChange() {
         var users=mock(UserEntityRepository.class);var encoder=new BCryptPasswordEncoder();
-        new EnvironmentOwnerBootstrap(users,encoder,"12345678901234","OWNER@EXAMPLE.TEST","+20 01018681448","temporaryPass123").run();
+        new EnvironmentOwnerBootstrap(users,encoder,"12345678901234","OWNER@EXAMPLE.TEST","+20 01000000000","temporaryPass123").run();
         var capture=ArgumentCaptor.forClass(UserEntity.class);verify(users).saveAndFlush(capture.capture());
         var owner=capture.getValue();assertEquals("owner",owner.getRole());assertEquals("12345678901234",owner.getNationalId());
-        assertEquals("owner@example.test",owner.getEmail());assertEquals("+201018681448",owner.getPhone());
+        assertEquals("owner@example.test",owner.getEmail());assertEquals("+201000000000",owner.getPhone());
         assertTrue(owner.isMustChangePassword());assertTrue(owner.isActive());assertTrue(encoder.matches("temporaryPass123",owner.getPasswordHash()));
     }
     @Test void emptyDatabaseWithoutConfiguredCredentialsCannotStartWithAnInsecureDefault() {

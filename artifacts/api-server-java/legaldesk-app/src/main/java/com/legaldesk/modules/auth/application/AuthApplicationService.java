@@ -20,6 +20,7 @@ import org.springframework.stereotype.Service;
 @Service
 public class AuthApplicationService {
 
+    @org.springframework.beans.factory.annotation.Autowired private AccountChangeMessages accountMessages;
     private final com.legaldesk.shared.security.JwtService jwt;
     @org.springframework.beans.factory.annotation.Value("${app.auth.secure-cookie:${SESSION_COOKIE_SECURE:false}}") private boolean secureCookie;
     private final AuthenticationManager authenticationManager;
@@ -78,6 +79,7 @@ public class AuthApplicationService {
         user.setMustChangePassword(false);
         user.setAuthVersion(user.getAuthVersion()+1);
         userRepository.saveAndFlush(user);
+        accountMessages.record(user.getId(),"تم تغيير كلمة مرور حسابك","تم تغيير كلمة مرور حسابك بنجاح بتاريخ "+java.time.OffsetDateTime.now()+". لم يتم إرسال كلمة المرور عبر البريد.",user.getEmail());
         var issued=jwt.issue(user);setCookie(response,issued.token(),jwt.minutes()*60L);response.setHeader("X-Session-Expires-At",issued.expiresAt().toString());
         return toAuthUser(user);
     }

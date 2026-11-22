@@ -63,10 +63,10 @@ class IdentityJwtConsultationIntegrationTest {
   var noContact=call("POST","/api/clients",Map.of("name","No contact"),token);long other=((Number)json(noContact).get("id")).longValue();assertEquals(200,call("POST","/api/office-portal/clients/"+other+"/account",Map.of("nationalId",Long.toString(sequence.incrementAndGet()),"password","password123"),token).statusCode());
  }
  @Test void clientLogsInByIdentityAndSplitPhoneLinksConsultation()throws Exception{
-  String phone="+20 01018681448",identity=Long.toString(sequence.incrementAndGet()),email="identityclient"+identity+"@example.test";
+  String phone="+20 01000000000",identity=Long.toString(sequence.incrementAndGet()),email="identityclient"+identity+"@example.test";
   var request=call("POST","/api/public/consultations",Map.of("name","Visitor","phone",phone,"summary","Question with split phone number"),null);assertEquals(201,request.statusCode());long requestId=((Number)json(request).get("id")).longValue();
-  var client=call("POST","/api/clients",Map.of("name","Identity client","phone","+201018681448"),token);assertEquals(201,client.statusCode());long clientId=((Number)json(client).get("id")).longValue();
-  assertEquals(200,call("POST","/api/office-portal/clients/"+clientId+"/account",Map.of("nationalId",identity,"email",email,"phone","+201018681448","password","password123"),token).statusCode());
+  var client=call("POST","/api/clients",Map.of("name","Identity client","phone","+201000000000"),token);assertEquals(201,client.statusCode());long clientId=((Number)json(client).get("id")).longValue();
+  assertEquals(200,call("POST","/api/office-portal/clients/"+clientId+"/account",Map.of("nationalId",identity,"email",email,"phone","+201000000000","password","password123"),token).statusCode());
   assertEquals(clientId,jdbc.queryForObject("SELECT client_id FROM consultation_requests WHERE id=?",Long.class,requestId));
   assertEquals(400,call("POST","/api/auth/login",Map.of("email",email,"password","password123"),null).statusCode());
   var login=call("POST","/api/auth/login",Map.of("nationalId",identity,"password","password123"),null);assertEquals(200,login.statusCode());assertTrue(login.body().contains("client"));
@@ -156,5 +156,62 @@ class IdentityJwtConsultationIntegrationTest {
   var u=new UserEntity();u.setName("Phone only recovery");u.setNationalId(Long.toString(sequence.incrementAndGet()));u.setPhone("+201000000008");u.setRole("lawyer");u.setPasswordHash(encoder.encode("password123"));users.saveAndFlush(u);
   var unknown=call("POST","/api/auth/forgot-password",Map.of("nationalId",Long.toString(sequence.incrementAndGet())),null);
   var phone=call("POST","/api/auth/forgot-password",Map.of("nationalId",u.getNationalId()),null);assertEquals(200,unknown.statusCode());assertEquals(unknown.body(),phone.body());verify(mail,never()).sendMessage(anyString(),anyString(),anyString());
+ }
+
+ @Test void allRolesManageOnlyTheirOwnContactAndReceiveSecurityMessages()throws Exception{
+  for(String role:List.of("client","lawyer","admin","owner")){
+   String bearer=userToken(role,"Profile "+role);long id=tokenUser(bearer);String old="old"+id+"@example.test",next="new"+id+"@example.test";
+   jdbc.update("UPDATE users SET email=?,phone='+201000000010' WHERE id=?",old,id);
+   var profile=call("GET","/api/account",null,bearer);assertEquals(200,profile.statusCode());String identity=(String)json(profile).get("nationalId");
+   assertEquals(400,call("PATCH","/api/account",Map.of("email",next,"phone","+966500000000","currentPassword","wrong"),bearer).statusCode());
+   var result=call("PATCH","/api/account",Map.of("email",next,"phone","+966500000000","currentPassword","password123","name","Changed name","nationalId","11111111111111","role","owner"),bearer);
+   assertEquals(200,result.statusCode(),result.body());assertEquals("Profile "+role,json(result).get("name"));assertEquals(identity,json(result).get("nationalId"));assertEquals(next,json(result).get("email"));assertEquals(role,json(result).get("role"));
+   assertEquals(4,jdbc.queryForObject("SELECT count(*) FROM account_messages WHERE user_id=?",Integer.class,id));assertEquals(2,jdbc.queryForObject("SELECT count(*) FROM account_messages WHERE user_id=? AND recipient=?",Integer.class,id,old));
+   assertEquals(2,jdbc.queryForObject("SELECT count(*) FROM notifications WHERE user_id=? AND type='account'",Integer.class,id));
+   assertTrue(jdbc.queryForList("SELECT body FROM account_messages WHERE user_id=?",String.class,id).stream().allMatch(v->!v.contains("password123")));
+   if(Set.of("admin","owner").contains(role))assertEquals(400,call("PATCH","/api/users/"+id,Map.of("nationalId","11111111111111"),bearer).statusCode());
+   var changed=call("POST","/api/auth/change-password",Map.of("currentPassword","password123","newPassword","newPassword123"),bearer);assertEquals(200,changed.statusCode(),changed.body());
+   assertEquals(401,call("GET","/api/account",null,bearer).statusCode());assertEquals(5,jdbc.queryForObject("SELECT count(*) FROM account_messages WHERE user_id=?",Integer.class,id));
+  }
+  assertEquals(401,call("GET","/api/account",null,null).statusCode());
+ }
+ private HttpResponse<String> uploadAvatar(String bearer,byte[] bytes,String type)throws Exception{
+  String boundary="AvatarTestBoundary";var data=new java.io.ByteArrayOutputStream();data.write(("--"+boundary+"\r\nContent-Disposition: form-data; name=\"file\"; filename=\"avatar.png\"\r\nContent-Type: "+type+"\r\n\r\n").getBytes(java.nio.charset.StandardCharsets.UTF_8));data.write(bytes);data.write(("\r\n--"+boundary+"--\r\n").getBytes(java.nio.charset.StandardCharsets.UTF_8));
+  return http.send(HttpRequest.newBuilder(URI.create("http://localhost:"+port+"/api/account/avatar")).header("Authorization","Bearer "+bearer).header("Content-Type","multipart/form-data; boundary="+boundary).POST(HttpRequest.BodyPublishers.ofByteArray(data.toByteArray())).build(),HttpResponse.BodyHandlers.ofString());
+ }
+ @Test void profilePicturesAreValidatedStoredOnDiskAndPrivate()throws Exception{
+  String bearer=userToken("client","Avatar client"),other=userToken("lawyer","Other avatar user");long id=tokenUser(bearer);
+  assertEquals(400,uploadAvatar(bearer,"<svg onload='alert(1)'></svg>".getBytes(),"image/png").statusCode());
+  var image=new java.awt.image.BufferedImage(800,600,java.awt.image.BufferedImage.TYPE_INT_RGB);var bytes=new java.io.ByteArrayOutputStream();javax.imageio.ImageIO.write(image,"png",bytes);
+  var uploaded=uploadAvatar(bearer,bytes.toByteArray(),"image/png");assertEquals(200,uploaded.statusCode(),uploaded.body());assertTrue(json(uploaded).get("avatarUrl").toString().startsWith("/api/account/avatar?v="));
+  assertTrue(jdbc.queryForObject("SELECT avatar_key FROM user_profiles WHERE user_id=?",String.class,id).startsWith("Profiles/user_"+id+"/avatar_"));
+  var downloaded=http.send(HttpRequest.newBuilder(URI.create("http://localhost:"+port+"/api/account/avatar")).header("Authorization","Bearer "+bearer).GET().build(),HttpResponse.BodyHandlers.ofByteArray());assertEquals(200,downloaded.statusCode());var resized=javax.imageio.ImageIO.read(new java.io.ByteArrayInputStream(downloaded.body()));assertEquals(512,resized.getWidth());
+  assertEquals(404,call("GET","/api/account/avatar",null,other).statusCode());assertEquals(401,call("GET","/api/account/avatar",null,null).statusCode());
+  assertEquals(200,uploadAvatar(bearer,bytes.toByteArray(),"image/png").statusCode());assertEquals(1,jdbc.queryForObject("SELECT count(*) FROM attachment_cleanup WHERE storage_key LIKE ?",Integer.class,"Profiles/user_"+id+"/%"));
+ }
+
+ @Test void lawyerDeletionIsBlockedUntilCasesAreTransferredAndHistoryIsPreserved()throws Exception{
+  String sourceToken=userToken("lawyer","Transfer source"),targetToken=userToken("lawyer","Transfer target"),otherToken=userToken("lawyer","Other case lawyer");long source=tokenUser(sourceToken),target=tokenUser(targetToken),other=tokenUser(otherToken);
+  jdbc.update("UPDATE users SET email=?,address='عنوان المحامي' WHERE id=?","source"+source+"@example.test",source);jdbc.update("UPDATE users SET email=? WHERE id=?","target"+target+"@example.test",target);
+  long client=jdbc.queryForObject("INSERT INTO clients(name) VALUES('Transfer client') RETURNING id",Long.class);
+  var created=call("POST","/api/cases",Map.of("caseNumber","TRANSFER-"+UUID.randomUUID(),"title","قضية عقد تجاري","type","commercial","clientIds",List.of(client),"lawyerIds",List.of(source,other)),token);assertEquals(201,created.statusCode(),created.body());long c=((Number)json(created).get("id")).longValue();
+  var details=call("GET","/api/lawyers/"+source,null,token);assertEquals(200,details.statusCode());assertTrue(details.body().contains("قضية عقد تجاري"));assertTrue(details.body().contains("Other case lawyer"));assertTrue(details.body().contains("عنوان المحامي"));
+  var blocked=call("DELETE","/api/users/"+source,null,token);assertEquals(400,blocked.statusCode(),blocked.body());assertTrue(blocked.body().contains("Transfer source"));
+  assertEquals(403,call("POST","/api/lawyers/"+source+"/cases/"+c+"/reassign",Map.of("lawyerId",target),otherToken).statusCode());
+  var moved=call("POST","/api/lawyers/"+source+"/cases/"+c+"/reassign",Map.of("lawyerId",target),token);assertEquals(200,moved.statusCode(),moved.body());
+  assertEquals(target,jdbc.queryForObject("SELECT lead_lawyer_id FROM cases WHERE id=?",Long.class,c));assertEquals(0,jdbc.queryForObject("SELECT count(*) FROM case_lawyers WHERE case_id=? AND user_id=?",Integer.class,c,source));assertEquals(1,jdbc.queryForObject("SELECT count(*) FROM case_lawyers WHERE case_id=? AND user_id=?",Integer.class,c,other));assertEquals(1,jdbc.queryForObject("SELECT count(*) FROM case_lawyers WHERE case_id=? AND user_id=?",Integer.class,c,target));
+  assertEquals(404,call("GET","/api/office-portal/cases/"+c,null,sourceToken).statusCode());assertEquals(200,call("GET","/api/office-portal/cases/"+c,null,targetToken).statusCode());
+  assertTrue(jdbc.queryForObject("SELECT body FROM account_messages WHERE user_id=? ORDER BY id DESC LIMIT 1",String.class,target).contains("/case-workspace/"+c));assertTrue(jdbc.queryForObject("SELECT body FROM account_messages WHERE user_id=? ORDER BY id DESC LIMIT 1",String.class,source).contains("تم رفعك"));
+  assertEquals(204,call("DELETE","/api/users/"+source,null,token).statusCode());assertEquals(false,jdbc.queryForObject("SELECT active FROM users WHERE id=?",Boolean.class,source));assertFalse(call("GET","/api/users",null,token).body().contains("Transfer source"));assertEquals(401,call("GET","/api/auth/me",null,sourceToken).statusCode());
+  assertTrue(jdbc.queryForObject("SELECT count(*) FROM case_activity WHERE case_id=?",Long.class,c)>0);
+ }
+ @Test void unassignmentAndExistingReplacementPreserveOtherLawyers()throws Exception{
+  String sourceToken=userToken("lawyer","Unassign source"),targetToken=userToken("lawyer","Already assigned");long source=tokenUser(sourceToken),target=tokenUser(targetToken);long client=jdbc.queryForObject("INSERT INTO clients(name) VALUES('Unassign client') RETURNING id",Long.class);
+  long first=jdbc.queryForObject("INSERT INTO cases(case_number,type,client_id,lead_lawyer_id) VALUES('UNASSIGN','civil',?,?) RETURNING id",Long.class,client,source);
+  assertEquals(200,call("POST","/api/lawyers/"+source+"/cases/"+first+"/reassign",new LinkedHashMap<String,Object>(){{put("lawyerId",null);}},token).statusCode());assertNull(jdbc.queryForObject("SELECT lead_lawyer_id FROM cases WHERE id=?",Long.class,first));assertEquals(0,jdbc.queryForObject("SELECT count(*) FROM case_lawyers WHERE case_id=?",Integer.class,first));
+  long second=jdbc.queryForObject("INSERT INTO cases(case_number,type,client_id,lead_lawyer_id) VALUES('REUSE','civil',?,?) RETURNING id",Long.class,client,source);jdbc.update("INSERT INTO case_lawyers(case_id,user_id) VALUES(?,?)",second,target);
+  assertEquals(200,call("POST","/api/lawyers/"+source+"/cases/"+second+"/reassign",Map.of("lawyerId",target),token).statusCode());assertEquals(1,jdbc.queryForObject("SELECT count(*) FROM case_lawyers WHERE case_id=?",Integer.class,second));
+  long third=jdbc.queryForObject("INSERT INTO cases(case_number,type,client_id,lead_lawyer_id) VALUES('INVALID-TARGET','civil',?,?) RETURNING id",Long.class,client,source);jdbc.update("UPDATE users SET active=FALSE WHERE id=?",target);
+  assertEquals(400,call("POST","/api/lawyers/"+source+"/cases/"+third+"/reassign",Map.of("lawyerId",target),token).statusCode());assertEquals(source,jdbc.queryForObject("SELECT lead_lawyer_id FROM cases WHERE id=?",Long.class,third));
  }
 }

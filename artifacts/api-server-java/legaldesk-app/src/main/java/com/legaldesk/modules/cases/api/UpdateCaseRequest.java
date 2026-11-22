@@ -12,6 +12,7 @@ public record UpdateCaseRequest(
         String opposingParty,
         String description,
         @jakarta.validation.constraints.Size(max=100) java.util.List<@jakarta.validation.constraints.NotNull Long> clientIds,
-        @jakarta.validation.constraints.Size(max=100) java.util.List<@jakarta.validation.constraints.NotNull Long> lawyerIds
+        @jakarta.validation.constraints.Size(max=100) java.util.List<@jakarta.validation.constraints.NotNull Long> lawyerIds,
+        @jakarta.validation.constraints.Size(max=200) String title
 ) {
 }

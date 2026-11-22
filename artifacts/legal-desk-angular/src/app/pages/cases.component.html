@@ -12,6 +12,7 @@
   @if (showCreate()) {
     <div class="card form-card" style="margin-bottom: 18px;">
       <div class="grid grid-3">
+        <div><label class="label">اسم القضية (اختياري)</label><input class="input" name="caseTitle" [ngModel]="form().title" (ngModelChange)="updateForm('title',$event)" maxlength="200"></div>
         <div>
           <label class="label">رقم القضية *</label>
           <input class="input" [ngModel]="form().caseNumber" (ngModelChange)="updateForm('caseNumber', $event)" />

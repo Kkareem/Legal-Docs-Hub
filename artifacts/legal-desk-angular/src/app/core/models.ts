@@ -1,4 +1,5 @@
 export interface User {
+  address?:string|null;
   mustChangePassword?: boolean;
   nationalId?: string | null;
   id: number;
@@ -49,6 +50,7 @@ export interface CreateClientBody {
 }
 
 export interface CaseItem {
+  title?:string|null;
   id: number;
   caseNumber: string;
   courtCaseNumber?: string | null;
@@ -77,6 +79,7 @@ export interface CaseItem {
 }
 
 export interface CreateCaseBody {
+  title?:string;
   clientIds?: number[];
   lawyerIds?: number[];
   caseNumber: string;

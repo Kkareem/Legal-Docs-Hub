@@ -1,2 +1,20 @@
-@if(auth.user();as user){@if(!user.mustChangePassword){<nav class="account-toolbar" aria-label="إعدادات الحساب والإشعارات"><a routerLink="/notifications" class="btn btn-secondary">الإشعارات <span class="badge badge-warning" aria-live="polite">{{notices.unread()}}</span></a><a routerLink="/settings" class="btn btn-secondary">الإعدادات</a><button class="btn btn-secondary" (click)="logout()">تسجيل الخروج</button></nav>}}
+@if(auth.user();as user){@if(!user.mustChangePassword){
+<nav class="account-toolbar" aria-label="إعدادات الحساب والإشعارات">
+ <app-notification-menu />
+ <div class="profile-menu" dir="rtl">
+  @if(profileOpen()){<button class="profile-backdrop" type="button" tabindex="-1" aria-label="إغلاق قائمة الحساب" (click)="closeProfile()"></button>}
+  <button type="button" class="profile-trigger" [class.is-open]="profileOpen()" aria-label="قائمة حسابي" [attr.aria-expanded]="profileOpen()" aria-controls="profile-dropdown" (click)="profileOpen.set(!profileOpen())">
+   @if(auth.avatarUrl()&&!avatarFailed()){<img [src]="auth.avatarUrl()" alt="صورة البروفايل" (error)="avatarFailed.set(true)">}@else{<span aria-hidden="true">{{user.name.trim().charAt(0)}}</span>}
+   <span class="chevron" aria-hidden="true">⌄</span>
+  </button>
+  @if(profileOpen()){
+   <section id="profile-dropdown" class="profile-dropdown" aria-label="خيارات الحساب">
+    <p class="profile-name">{{user.name}}</p>
+    <a routerLink="/account" (click)="closeProfile()">حسابي</a>
+    <button type="button" (click)="logout()">تسجيل الخروج</button>
+   </section>
+  }
+ </div>
+</nav>
+}}
 <router-outlet />

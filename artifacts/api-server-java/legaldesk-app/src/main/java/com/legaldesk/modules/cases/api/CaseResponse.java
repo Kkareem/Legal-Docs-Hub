@@ -20,6 +20,7 @@ public record CaseResponse(
         OffsetDateTime createdAt,
         OffsetDateTime updatedAt,
         java.util.List<java.util.Map<String,Object>> clients,
-        java.util.List<java.util.Map<String,Object>> lawyers
+        java.util.List<java.util.Map<String,Object>> lawyers,
+        String title
 ) {
 }

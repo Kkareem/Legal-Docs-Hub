@@ -8,6 +8,10 @@ import jakarta.persistence.Table;
 @Entity
 @Table(name = "cases")
 public class CaseEntity extends AuditedEntity {
+    private String title;
+    public String getTitle(){return title;}
+    public void setTitle(String value){title=value;}
+
 
     @Column(name = "case_number", nullable = false)
     private String caseNumber;

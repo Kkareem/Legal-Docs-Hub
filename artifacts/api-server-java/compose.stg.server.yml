@@ -1,0 +1,61 @@
+name: legaldesk-stg
+services:
+  backend:
+    container_name: be-legal-desk
+    image: be-legal-desk:${APP_IMAGE_TAG:-latest}
+    build:
+      context: .
+      args:
+        APP_PROFILE: stg
+    environment:
+      SPRING_PROFILES_ACTIVE: stg
+      BOOTSTRAP_OWNER_NATIONAL_ID: ${BOOTSTRAP_OWNER_NATIONAL_ID:-}
+      BOOTSTRAP_OWNER_EMAIL: ${BOOTSTRAP_OWNER_EMAIL:-}
+      BOOTSTRAP_OWNER_PHONE: ${BOOTSTRAP_OWNER_PHONE:-}
+      BOOTSTRAP_OWNER_PASSWORD: ${BOOTSTRAP_OWNER_PASSWORD:-}
+      DATABASE_URL: jdbc:postgresql://postgresql:5432/legaldesk
+      DATABASE_USERNAME: ${DATABASE_USERNAME:-kk_postgres}
+      DATABASE_PASSWORD: ${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in the environment file}
+      APP_PUBLIC_URL: ${APP_PUBLIC_URL:-http://localhost:4021}
+      APP_ATTACHMENTS_DIRECTORY: /app/.data/attachments
+      APP_SETTINGS_KEY_FILE: /app/.data/settings.key
+      SESSION_COOKIE_SECURE: "false"
+    ports:
+      - "127.0.0.1:${BACKEND_PORT:-8081}:8080"
+    volumes:
+      - legaldesk-files:/app/.data
+    networks:
+      - default
+      - staging-database
+    healthcheck:
+      test: ["CMD", "wget", "-q", "-O", "/dev/null", "http://127.0.0.1:8080/api/healthz"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 40s
+    restart: unless-stopped
+
+  frontend:
+    container_name: fe-legal-desk
+    image: fe-legal-desk:${APP_IMAGE_TAG:-latest}
+    build:
+      context: ../legal-desk-angular
+    ports:
+      - "${FRONTEND_PORT:-4021}:80"
+    depends_on:
+      backend:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "wget", "-q", "-O", "/dev/null", "http://127.0.0.1/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+
+volumes:
+  legaldesk-files:
+
+networks:
+  staging-database:
+    external: true
+    name: ${STAGING_DATABASE_NETWORK:-postgresql-jvhz_default}

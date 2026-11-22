@@ -56,4 +56,14 @@ describe('Client portal',()=>{
   f.componentInstance.reviewLawyerId=4;f.componentInstance.review();
   expect(api.review).toHaveBeenCalledWith(10,5,'',4);
  });
+
+ it('keeps consultation creation in a dialog and shows an empty consultation list',()=>{
+  api.consultation=vi.fn(()=>of({}));const f=TestBed.createComponent(ClientPortalComponent);f.componentInstance.tab.set('consultations');f.detectChanges();
+  expect(f.nativeElement.textContent).toContain('لا توجد استشارات سابقة');expect(f.nativeElement.querySelector('form')).toBeNull();expect(f.nativeElement.textContent).not.toContain('تسجيل الخروج');
+  f.componentInstance.openConsultation();f.detectChanges();expect(f.nativeElement.querySelector('dialog form')).not.toBeNull();f.componentInstance.summary='أحتاج إلى استشارة قانونية جديدة';f.componentInstance.consultCaseId=10;f.componentInstance.newConsultation();f.detectChanges();
+  expect(api.consultation).toHaveBeenCalledWith('أحتاج إلى استشارة قانونية جديدة',10);expect(f.nativeElement.querySelector('dialog')).toBeNull();expect(f.nativeElement.textContent).toContain('تم إرسال الاستشارة للمكتب');
+ });
+ it('shows earlier consultations without opening the new consultation form',()=>{
+  const f=TestBed.createComponent(ClientPortalComponent);f.componentInstance.tab.set('consultations');f.componentInstance.overview.update(d=>d?{...d,consultations:[{id:7,summary:'استشارة سابقة عن العقد',response:'رد المكتب',status:'answered'}]}:null);f.detectChanges();expect(f.nativeElement.textContent).toContain('استشارة سابقة عن العقد');expect(f.nativeElement.textContent).toContain('رد المكتب');expect(f.nativeElement.textContent).not.toContain('لا توجد استشارات سابقة');expect(f.nativeElement.querySelector('dialog')).toBeNull();
+ });
 });

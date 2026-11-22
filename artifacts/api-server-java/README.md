@@ -206,7 +206,7 @@ docker compose -f artifacts/api-server-java/compose.yml logs --tail 50 backend
 
 All accounts (office staff, lawyers and clients) sign in with a 14-digit `nationalId`. Email is contact information only. Legacy accounts without an identity must have their real identity recorded by an administrator in Settings before signing in.
 
-Telephone fields have separate country-code and national-number inputs. They submit a normalized international telephone string to the API, preserving the existing contact matching and consultation linking contract. Egypt uses `+20` and Saudi Arabia uses `+966`; the domestic leading zero is omitted when saving these numbers (`+20` / `01018681448` → `+201018681448`, `+966` / `0551400324` → `+966551400324`). Other country codes remain editable. Phone consultation tracking uses the same input and continues to require SMS verification configuration.
+Telephone fields use a searchable Arabic country selector and a national-number input with no real phone number in its placeholder. Country calling codes come from libphonenumber-js. The API continues receiving a normalized international number. Egypt and Saudi Arabia omit the domestic leading zero. Phone consultation tracking continues to require SMS verification configuration.
 
 
 ## dev / stg / prod profiles and debugging
@@ -261,3 +261,27 @@ Staging opens at http://localhost:4021, its backend is on loopback port 8081, an
 For a new empty staging/production database, set `BOOTSTRAP_OWNER_NATIONAL_ID` (14 digits), `BOOTSTRAP_OWNER_PASSWORD` (10-128 characters) and either `BOOTSTRAP_OWNER_EMAIL` or `BOOTSTRAP_OWNER_PHONE`. The account is created once as owner and must change its temporary password on first login. Existing accounts are never changed by bootstrap values. Empty databases without valid bootstrap credentials fail startup with an actionable message. Remove bootstrap secrets from the environment after provisioning the owner.
 
 Keep each environment's PostgreSQL and `legaldesk-files` volumes together when backing up or moving it. Nginx permits multipart uploads of the API's configured size and handles Angular deep links. No debugger port is enabled in either Docker stack.
+
+## Deployment application names
+
+Docker containers and images use `be-legal-desk` (Java backend) and `fe-legal-desk` (Angular frontend). Compose service names remain `backend` and `frontend` for internal networking and commands. Set `APP_IMAGE_TAG` per environment (`stg` in `.env.stg`). Fixed container names allow one stack per Docker host; stop an existing stack before switching environments on the same host.
+
+Staging target: `187.7.74.246`, SSH user `root`, application URL `http://187.7.74.246:4021`. Staging uses database `legaldesk` and username `kk_postgres`. Keep passwords in the ignored `.env.stg` or an SSH credential manager. PostgreSQL is published only on server loopback port 5433. Supply bootstrap owner identity, contact and temporary password for a fresh database. Updating environment credentials does not update roles in an existing PostgreSQL volume; arrange a database role update before reusing existing data.
+
+Run from `artifacts/api-server-java` on the staging host:
+
+```bash
+docker compose --env-file .env.stg -f compose.stg.yml up -d --build --wait
+docker compose --env-file .env.stg -f compose.stg.yml ps
+```
+### Staging host with an existing PostgreSQL container
+
+On `187.7.74.246`, use `compose.stg.server.yml` from `/opt/legaldesk-stg/artifacts/api-server-java`. This stack uses the existing `postgresql` network alias and database `legaldesk` on the external Docker network `postgresql-jvhz_default`; set `STAGING_DATABASE_NETWORK` if the network changes. It does not create or manage PostgreSQL. The backend joins this network and a private application network; the frontend joins only the application network. Keep `.env.stg` readable only by its owner (`chmod 600`).
+
+```bash
+docker compose --env-file .env.stg -f compose.stg.server.yml up -d --build --wait
+docker compose --env-file .env.stg -f compose.stg.server.yml ps
+curl --fail http://127.0.0.1:4021/api/healthz
+```
+
+Back up the existing database separately and preserve the `legaldesk-stg_legaldesk-files` volume containing the settings encryption key and attachment files. Fill in real bootstrap owner identity and contact details before the first start on an empty database. The backend is available on server loopback port 8081; public web traffic uses port 4021.

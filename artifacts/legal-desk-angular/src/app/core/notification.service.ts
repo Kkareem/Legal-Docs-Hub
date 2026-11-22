@@ -9,6 +9,7 @@ export interface ApplicationSettings {currency:string;emailReady:boolean;pushPub
 @Injectable({providedIn:'root'})
 export class NotificationService {
  private http=inject(HttpClient);private auth=inject(AuthService);private currency=inject(CurrencyService);
+ readonly error=signal('');
  readonly items=signal<UserNotice[]>([]);readonly preferences=signal<NoticePreferences|null>(null);
  readonly config=signal<ApplicationSettings|null>(null);readonly unread=computed(()=>this.preferences()?.site_enabled?this.items().filter(n=>!n.read).length:0);
  readonly options={withCredentials:true};
@@ -20,8 +21,8 @@ export class NotificationService {
   onCleanup(()=>{setup.unsubscribe();poll.unsubscribe();});
  });}
  refresh(){return forkJoin({items:this.http.get<UserNotice[]>('/api/notifications',this.options),prefs:this.http.get<NoticePreferences>('/api/notifications/preferences',this.options)});}
- markRead(id:number){this.http.patch('/api/notifications/'+id+'/read',{},this.options).subscribe({next:()=>this.items.update(rows=>rows.map(n=>n.id===id?{...n,read:true}:n))});}
- markAll(){this.http.patch('/api/notifications/read-all',{},this.options).subscribe({next:()=>this.items.update(rows=>rows.map(n=>({...n,read:true})))});}
+ markRead(id:number){this.error.set('');this.http.patch('/api/notifications/'+id+'/read',{},this.options).subscribe({next:()=>this.items.update(rows=>rows.map(n=>n.id===id?{...n,read:true}:n)),error:()=>this.error.set('تعذر تسجيل الإشعار كمقروء. حاول مرة أخرى.')});}
+ markAll(){this.error.set('');this.http.patch('/api/notifications/read-all',{},this.options).subscribe({next:()=>this.items.update(rows=>rows.map(n=>({...n,read:true}))),error:()=>this.error.set('تعذر تحديد كل الإشعارات كمقروءة. حاول مرة أخرى.')});}
  savePreferences(p:NoticePreferences){return this.http.put<NoticePreferences>('/api/notifications/preferences',{siteEnabled:p.site_enabled,emailEnabled:p.email_enabled,browserEnabled:p.browser_enabled},this.options);}
  supported(){return typeof window!=='undefined'&&window.isSecureContext&&'Notification' in window&&'serviceWorker' in navigator&&'PushManager' in window;}
  async enableBrowser(){
